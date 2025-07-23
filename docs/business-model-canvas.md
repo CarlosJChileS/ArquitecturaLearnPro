@@ -4,17 +4,25 @@ Plataforma de aprendizaje por suscripción con cursos en línea y seguimiento de
 ## Segmentos de clientes 
 Profesionales y estudiantes que desean mejorar habilidades técnicas. Empresas que ofrecen capacitación a sus empleados.
 
-| **Canales**  | 
+**Canales**
+
 Sitio web y aplicación web. Integraciones con redes sociales para difusión.
-| **Relaciones con clientes** | 
+
+**Relaciones con clientes**
+
 Soporte por correo, notificaciones automáticas.
-| **Fuentes de ingreso** | 
+
+**Fuentes de ingreso** 
 Suscripciones mensuales/anuales. Venta puntual de cursos premium.
-| **Recursos clave** | 
+
+**Recursos clave** 
 Contenido educativo, infraestructura cloud, acuerdos con instructores.
-| **Actividades clave** 
- Desarrollo de la plataforma, producción de cursos y.
-| **Socios clave** | 
+
+**Actividades clave** 
+Desarrollo de la plataforma, producción de cursos y.
+
+**Socios clave**
 Instructores expertos, proveedores de pagos (Stripe, PayPal) y Supabase como backend. 
-| **Estructura de costos** | 
+
+**Estructura de costos**
 Desarrollo y mantenimiento, comisiones de pago, hosting y producción de contenido.
