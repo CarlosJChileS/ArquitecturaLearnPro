@@ -1,5 +1,6 @@
-# LearnPro
+# LearnPro 📚
 
+<<<<<<< HEAD
 Plataforma de aprendizaje por suscripción construida con Node.js y React. El proyecto sigue una arquitectura modular donde cada dominio (autenticación, cursos, pagos, notificaciones) se implementa como un módulo independiente. Incluye una API REST y un frontend basado en Vite.
 
 La documentación completa se encuentra en la carpeta [docs](docs/), donde se incluyen el modelo C4 y las ADR que describen las decisiones de diseño.
@@ -39,12 +40,93 @@ database/
 ## Running the backend
 
 Install dependencies and start the API gateway:
+=======
+**Plataforma de aprendizaje por suscripción** desarrollada con Node.js (backend) y React (frontend), siguiendo principios de arquitectura modular, integración continua y despliegue automatizado.
+
+---
+
+## 🧠 Funcionalidades Principales
+
+- Gestión de cursos, lecciones y usuarios
+- Autenticación segura y control de acceso por planes (mensual/anual)
+- Suscripciones con pagos integrados vía **Stripe** y **PayPal**
+- Dashboard del estudiante con progreso
+- Panel de administración para cursos y usuarios
+- Notificaciones y recordatorios
+- Documentación técnica y despliegue cloud-native
+
+---
+
+## 🏗️ Estructura del Proyecto
+
+```
+├── api-gateway/              # Servidor Express y React frontend
+│   ├── index.js              # Punto de entrada del backend
+│   └── public/               # Cliente React (Vite)
+├── core/                     # Núcleo del sistema (DDD)
+│   ├── application/          # Casos de uso y lógica de aplicación
+│   ├── domain/               # Entidades y modelos de dominio
+│   └── infrastructure/       # Adaptadores e infraestructura externa
+├── database/                 # Esquema de base de datos Supabase
+│   └── supabase-schema.sql
+├── docs/                     # Documentación técnica
+│   ├── adr/                  # Architecture Decision Records
+│   ├── business-model-canvas.md
+│   ├── c4-model.md
+│   └── index.md
+├── modules/                  # Módulos funcionales (auth, payments, etc.)
+├── shared/                   # Código compartido (middleware, utils)
+├── .gitignore
+├── package.json
+├── package-lock.json
+└── README.md
+```
+
+---
+
+## 🚀 Instalación y Ejecución Local
+
+### Requisitos
+
+- Node.js ≥ 18
+- Supabase CLI (`npm install -g supabase`)
+- Git
+
+### 1. Clonar el repositorio
+
+```bash
+git clone https://github.com/CarlosJChileS/ArquitecturaLearnPro.git
+cd ArquitecturaLearnPro
+```
+
+### 2. Configurar variables de entorno
+
+Copia el archivo de ejemplo:
+
+```bash
+cp .env.example .env
+```
+
+Agrega tus claves de Supabase, Stripe y PayPal. Más abajo encontrarás los campos requeridos.
+
+### 3. Iniciar Supabase localmente
+```bash
+supabase start
+```
+
+Luego configura las variables `SUPABASE_URL` y `SUPABASE_ANON_KEY`.
+
+---
+
+### 4. Iniciar el backend
+>>>>>>> 950f0b609f51b32fe2811cd2a4c52b092d6aa0a1
 
 ```bash
 npm install
 npm start
 ```
 
+<<<<<<< HEAD
 The server runs on port `8080` by default.
 
 ### API documentation
@@ -55,6 +137,13 @@ When the server is running you can explore all endpoints using Swagger UI at
 ## Running the front-end
 
 The React client lives inside `api-gateway/public`. To run it in development mode:
+=======
+Por defecto corre en `http://localhost:8080`
+
+---
+
+### 5. Iniciar el frontend
+>>>>>>> 950f0b609f51b32fe2811cd2a4c52b092d6aa0a1
 
 ```bash
 cd api-gateway/public
@@ -62,6 +151,7 @@ npm install
 npm run dev
 ```
 
+<<<<<<< HEAD
 This launches the Vite dev server.
 
 ## Running with Docker
@@ -84,19 +174,41 @@ The application will be available on `http://localhost:8080`.
 ## Using Supabase locally
 
 The project can connect to a Supabase backend. A convenience client is provided in `shared/utils/supabaseClient.js` which reads `SUPABASE_URL` and `SUPABASE_ANON_KEY` from the environment. You can run a full Supabase stack locally using the [Supabase CLI](https://supabase.com/docs/guides/cli). After installing the CLI, start the services:
+=======
+Se abrirá en `http://localhost:5173`
 
-```bash
-supabase start
-```
 
+## ☁️ Despliegue en Producción
+
+- **Google Cloud**
+
+---
+
+## 📄 Variables de Entorno
+
+| Variable | Descripción |
+|---------|-------------|
+| `SUPABASE_URL` | URL de Supabase |
+| `SUPABASE_ANON_KEY` | API Key pública |
+| `SUPABASE_SERVICE_ROLE_KEY` | Clave de servicio |
+| `STRIPE_SECRET_KEY` | Clave secreta de Stripe |
+| `PAYPAL_CLIENT_ID` | Client ID de PayPal |
+| `PAYPAL_CLIENT_SECRET` | Client Secret de PayPal |
+| `ADMIN_EMAILS` | Correos de administradores |
+| `PORT` | Puerto del servidor |
+| `DB_HOST`, `DB_NAME`, etc. | Configuración opcional de DB externa |
+>>>>>>> 950f0b609f51b32fe2811cd2a4c52b092d6aa0a1
+
+---
+
+<<<<<<< HEAD
 This command launches a local Postgres instance and prints connection credentials. Set the `SUPABASE_URL` and `SUPABASE_ANON_KEY` variables before starting the API gateway so it connects to your local stack:
+=======
+>>>>>>> 950f0b609f51b32fe2811cd2a4c52b092d6aa0a1
 
-```bash
-export SUPABASE_URL=http://localhost:54321
-export SUPABASE_ANON_KEY=your-local-anon-key
-npm start
-```
+## 💳 Pasarelas de Pago
 
+<<<<<<< HEAD
 To use a hosted Supabase project instead, set the same environment variables to your project's URL and API key. The server will then connect to the remote backend.
 
 ## Environment variables
@@ -161,3 +273,17 @@ environment variables. When `SUPABASE_URL` is set, the API gateway invokes this
 function through Supabase to create an order and returns the approval URL. If no
 Supabase backend is configured, the API falls back to the local PayPal SDK
 implementation.
+=======
+### Stripe
+
+- Checkout en `/payments/stripe`
+- Confirmación vía `session_id`
+
+### PayPal
+
+- Función Edge en Supabase
+- Ruta: `/payments/paypal`
+
+---
+
+>>>>>>> 950f0b609f51b32fe2811cd2a4c52b092d6aa0a1
