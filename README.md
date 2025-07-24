@@ -44,8 +44,8 @@
 ### 1. Clonar el repositorio
 
 ```bash
-git clone https://github.com/tuusuario/learnpro.git
-cd learnpro
+git clone https://github.com/CarlosJChileS/ArquitecturaLearnPro.git
+cd ArquitecturaLearnPro
 ```
 
 ### 2. Configurar variables de entorno
