@@ -22,12 +22,23 @@
 ├── api-gateway/              # Servidor Express y React frontend
 │   ├── index.js              # Punto de entrada del backend
 │   └── public/               # Cliente React (Vite)
-├── core/                     # Modelos de dominio y servicios de aplicación
-├── modules/                  # Módulos por dominio (auth, payments, etc.)
-├── shared/                   # Middleware, utils, patrones comunes
-├── docker/                   # Archivos Docker
-├── database/                 # Esquema Supabase (SQL)
-└── docs/                     # Documentación C4, ADRs, Canvas
+├── core/                     # Núcleo del sistema (DDD)
+│   ├── application/          # Casos de uso y lógica de aplicación
+│   ├── domain/               # Entidades y modelos de dominio
+│   └── infrastructure/       # Adaptadores e infraestructura externa
+├── database/                 # Esquema de base de datos Supabase
+│   └── supabase-schema.sql
+├── docs/                     # Documentación técnica
+│   ├── adr/                  # Architecture Decision Records
+│   ├── business-model-canvas.md
+│   ├── c4-model.md
+│   └── index.md
+├── modules/                  # Módulos funcionales (auth, payments, etc.)
+├── shared/                   # Código compartido (middleware, utils)
+├── .gitignore
+├── package.json
+├── package-lock.json
+└── README.md
 ```
 
 ---
@@ -38,7 +49,6 @@
 
 - Node.js ≥ 18
 - Supabase CLI (`npm install -g supabase`)
-- Docker (opcional)
 - Git
 
 ### 1. Clonar el repositorio
@@ -58,8 +68,7 @@ cp .env.example .env
 
 Agrega tus claves de Supabase, Stripe y PayPal. Más abajo encontrarás los campos requeridos.
 
-### 3. Iniciar Supabase localmente (opcional)
-
+### 3. Iniciar Supabase localmente
 ```bash
 supabase start
 ```
@@ -89,30 +98,10 @@ npm run dev
 
 Se abrirá en `http://localhost:5173`
 
----
-
-## 🐳 Ejecución con Docker
-
-```bash
-docker build -t learnpro .
-docker run -p 8080:8080 learnpro
-```
-
-Asegúrate de que las variables de entorno estén configuradas correctamente. Usa `--build-arg` o un archivo `.env`.
-
----
 
 ## ☁️ Despliegue en Producción
 
-Puedes desplegar este proyecto en:
-
-- **Render**
-- **Railway**
-- **Vercel (frontend)**
-- **Supabase (backend)**
-- **GCP / AWS / Azure** (opcional)
-
-Usa los scripts y configuración en la carpeta `/docker` o archivos de CI/CD disponibles.
+- **Google Cloud**
 
 ---
 
@@ -132,29 +121,6 @@ Usa los scripts y configuración en la carpeta `/docker` o archivos de CI/CD dis
 
 ---
 
-## 📦 Documentación Técnica
-
-- 📌 Modelo C4: `docs/c4-diagrams/`
-- 🧠 Decisiones arquitectónicas (ADRs): `docs/adr/`
-- 📃 Documentación API: `/api-docs` (Swagger/OpenAPI)
-- 💼 Modelo de Negocio: `docs/business-model-canvas.pdf`
-
----
-
-## 🧪 Pruebas y Calidad
-
-- Análisis de calidad automatizado con **SonarQube**
-- Cobertura mínima del 70%
-- Linter configurado
-- Scripts de pruebas unitarias y funcionales
-
----
-
-## 🔐 Autenticación
-
-Sistema basado en tokens JWT con middleware para validar roles y permisos. Se incluyen roles: `admin`, `student`.
-
----
 
 ## 💳 Pasarelas de Pago
 
@@ -170,30 +136,3 @@ Sistema basado en tokens JWT con middleware para validar roles y permisos. Se in
 
 ---
 
-## 🔄 CI/CD
-
-- GitHub Actions con SonarQube
-- Scripts para build, test y despliegue automático
-- Ramas organizadas con **GitFlow**
-
----
-
-## 📂 Modelo GitFlow
-
-- `main`: versión estable
-- `develop`: integración
-- `feature/*`: nuevas funcionalidades
-- `release/*`, `hotfix/*`, etc.
-
----
-
-## 👨‍💻 Autores
-
-- Equipo LearnPro - ULEAM 2025-1
-- Docente: [Nombre del Docente]
-
----
-
-## 📃 Licencia
-
-MIT © 2025 - Universidad Laica Eloy Alfaro de Manabí
