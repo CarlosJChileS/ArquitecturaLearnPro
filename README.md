@@ -1,52 +1,85 @@
-# LearnPro
+# LearnPro 📚
 
-Plataforma de aprendizaje simple basada en suscripción, utilizando una arquitectura modular. El proyecto es una pequeña prueba de concepto en Node.js que expone varios módulos de funcionalidades y un front-end en React.
+**Plataforma de aprendizaje por suscripción** desarrollada con Node.js (backend) y React (frontend), siguiendo principios de arquitectura modular, integración continua y despliegue automatizado.
 
-## Estructura
+---
+
+## 🧠 Funcionalidades Principales
+
+- Gestión de cursos, lecciones y usuarios
+- Autenticación segura y control de acceso por planes (mensual/anual)
+- Suscripciones con pagos integrados vía **Stripe** y **PayPal**
+- Dashboard del estudiante con progreso
+- Panel de administración para cursos y usuarios
+- Notificaciones y recordatorios
+- Documentación técnica y despliegue cloud-native
+
+---
+
+## 🏗️ Estructura del Proyecto
 
 ```
-api-gateway/
-    index.js                # Punto de entrada de Express
-    public/                 # Front-end en React
-core/
-    domain/
-    application/
-    infrastructure/
-modules/
-    auth/
-    products/
-    payments/
-    notifications/
-shared/
-    middleware/
-    utils/
-    patterns/
-docker/
-database/
+├── api-gateway/              # Servidor Express y React frontend
+│   ├── index.js              # Punto de entrada del backend
+│   └── public/               # Cliente React (Vite)
+├── core/                     # Modelos de dominio y servicios de aplicación
+├── modules/                  # Módulos por dominio (auth, payments, etc.)
+├── shared/                   # Middleware, utils, patrones comunes
+├── docker/                   # Archivos Docker
+├── database/                 # Esquema Supabase (SQL)
+└── docs/                     # Documentación C4, ADRs, Canvas
 ```
 
-* **api-gateway/** aloja la aplicación Express y expone los diferentes módulos de funcionalidades.
-* **public/** dentro de `api-gateway` contiene el front-end de React (Vite).
-* **core/** contiene los modelos de dominio y servicios de aplicación utilizados por los módulos de funcionalidades.
-* **modules/** agrupa las rutas para autenticación, productos, pagos y notificaciones.
-* **shared/** contiene middleware, utilidades y patrones comunes.
-* **docker/** se puede usar para los archivos de contenedores (Docker).
-* **database/** incluye el archivo `supabase-schema.sql` con las tablas normalizadas de PostgreSQL usadas en el proyecto.
+---
 
-## Ejecutar el backend
+## 🚀 Instalación y Ejecución Local
 
-Instala las dependencias y arranca el API gateway:
+### Requisitos
+
+- Node.js ≥ 18
+- Supabase CLI (`npm install -g supabase`)
+- Docker (opcional)
+- Git
+
+### 1. Clonar el repositorio
+
+```bash
+git clone https://github.com/tuusuario/learnpro.git
+cd learnpro
+```
+
+### 2. Configurar variables de entorno
+
+Copia el archivo de ejemplo:
+
+```bash
+cp .env.example .env
+```
+
+Agrega tus claves de Supabase, Stripe y PayPal. Más abajo encontrarás los campos requeridos.
+
+### 3. Iniciar Supabase localmente (opcional)
+
+```bash
+supabase start
+```
+
+Luego configura las variables `SUPABASE_URL` y `SUPABASE_ANON_KEY`.
+
+---
+
+### 4. Iniciar el backend
 
 ```bash
 npm install
 npm start
 ```
 
-El servidor se ejecuta por defecto en el puerto `3000`.
+Por defecto corre en `http://localhost:8080`
 
-## Ejecutar el front-end
+---
 
-El cliente de React se encuentra dentro de `api-gateway/public`. Para ejecutarlo en modo desarrollo:
+### 5. Iniciar el frontend
 
 ```bash
 cd api-gateway/public
@@ -54,46 +87,113 @@ npm install
 npm run dev
 ```
 
-Esto inicia el servidor de desarrollo de Vite.
+Se abrirá en `http://localhost:5173`
 
-## Ejecutar con Docker
+---
 
-El `Dockerfile` incluido construye el front-end de React y lo empaqueta junto con la API de Express, así ambos corren en un solo contenedor. Para construir y ejecutar:
-
-```bash
-docker build -t learnpro -f docker/Dockerfile .
-docker run -p 3000:3000 learnpro
-```
-
-La aplicación estará disponible en `http://localhost:3000`.
-
-## Usar Supabase localmente
-
-El proyecto puede conectarse a un backend de Supabase. Se provee un cliente en `shared/utils/supabaseClient.js` que lee `SUPABASE_URL` y `SUPABASE_ANON_KEY` desde las variables de entorno. Puedes ejecutar todo Supabase localmente usando la [CLI de Supabase](https://supabase.com/docs/guides/cli). Tras instalar la CLI, inicia los servicios:
+## 🐳 Ejecución con Docker
 
 ```bash
-supabase start
+docker build -t learnpro .
+docker run -p 8080:8080 learnpro
 ```
 
-Este comando inicia una instancia local de Postgres e imprime las credenciales de conexión. Establece las variables `SUPABASE_URL` y `SUPABASE_ANON_KEY` antes de iniciar el API gateway para que se conecte a tu entorno local:
+Asegúrate de que las variables de entorno estén configuradas correctamente. Usa `--build-arg` o un archivo `.env`.
 
-```bash
-export SUPABASE_URL=http://localhost:54321
-export SUPABASE_ANON_KEY=your-local-anon-key
-npm start
-```
+---
 
-Para usar un proyecto de Supabase en la nube, simplemente configura esas variables con la URL y la API key de tu proyecto remoto.
+## ☁️ Despliegue en Producción
 
-## Variables de entorno
+Puedes desplegar este proyecto en:
 
-Crea un archivo `.env` en la raíz del proyecto que contenga las siguientes claves:
+- **Render**
+- **Railway**
+- **Vercel (frontend)**
+- **Supabase (backend)**
+- **GCP / AWS / Azure** (opcional)
 
-* `SUPABASE_URL` y `SUPABASE_ANON_KEY` – detalles de conexión a Supabase.
-* `SUPABASE_SERVICE_ROLE_KEY` – clave de servicio para operaciones privilegiadas.
-* `ADMIN_EMAILS` – lista de correos de administradores, separados por coma.
-* `PORT` – puerto para el API gateway (por defecto `3000`).
-* `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` – información de conexión a la base de datos.
-* `ADMIN_ACCOUNTS` – opcional, pares `email:password` para cuentas admin iniciales.
+Usa los scripts y configuración en la carpeta `/docker` o archivos de CI/CD disponibles.
 
-Consulta `.env` para un ejemplo de configuración.
+---
+
+## 📄 Variables de Entorno
+
+| Variable | Descripción |
+|---------|-------------|
+| `SUPABASE_URL` | URL de Supabase |
+| `SUPABASE_ANON_KEY` | API Key pública |
+| `SUPABASE_SERVICE_ROLE_KEY` | Clave de servicio |
+| `STRIPE_SECRET_KEY` | Clave secreta de Stripe |
+| `PAYPAL_CLIENT_ID` | Client ID de PayPal |
+| `PAYPAL_CLIENT_SECRET` | Client Secret de PayPal |
+| `ADMIN_EMAILS` | Correos de administradores |
+| `PORT` | Puerto del servidor |
+| `DB_HOST`, `DB_NAME`, etc. | Configuración opcional de DB externa |
+
+---
+
+## 📦 Documentación Técnica
+
+- 📌 Modelo C4: `docs/c4-diagrams/`
+- 🧠 Decisiones arquitectónicas (ADRs): `docs/adr/`
+- 📃 Documentación API: `/api-docs` (Swagger/OpenAPI)
+- 💼 Modelo de Negocio: `docs/business-model-canvas.pdf`
+
+---
+
+## 🧪 Pruebas y Calidad
+
+- Análisis de calidad automatizado con **SonarQube**
+- Cobertura mínima del 70%
+- Linter configurado
+- Scripts de pruebas unitarias y funcionales
+
+---
+
+## 🔐 Autenticación
+
+Sistema basado en tokens JWT con middleware para validar roles y permisos. Se incluyen roles: `admin`, `student`.
+
+---
+
+## 💳 Pasarelas de Pago
+
+### Stripe
+
+- Checkout en `/payments/stripe`
+- Confirmación vía `session_id`
+
+### PayPal
+
+- Función Edge en Supabase
+- Ruta: `/payments/paypal`
+
+---
+
+## 🔄 CI/CD
+
+- GitHub Actions con SonarQube
+- Scripts para build, test y despliegue automático
+- Ramas organizadas con **GitFlow**
+
+---
+
+## 📂 Modelo GitFlow
+
+- `main`: versión estable
+- `develop`: integración
+- `feature/*`: nuevas funcionalidades
+- `release/*`, `hotfix/*`, etc.
+
+---
+
+## 👨‍💻 Autores
+
+- Equipo LearnPro - ULEAM 2025-1
+- Docente: [Nombre del Docente]
+
+---
+
+## 📃 Licencia
+
+MIT © 2025 - Universidad Laica Eloy Alfaro de Manabí
