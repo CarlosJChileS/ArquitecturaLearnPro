@@ -1,5 +1,5 @@
 // Simple middleware to check subscription
-const subscriptions = require('../../../ArquitecturaLearnPro/core/domain/subscriptions');
+const subscriptions = require('../../core/domain/subscriptions');
 const supabase = require('../utils/supabaseClient');
 
 module.exports = async function (req, res, next) {

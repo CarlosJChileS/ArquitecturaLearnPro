@@ -1,6 +1,6 @@
 # 2. Uso de Supabase como backend
 
-Fecha: 2025-07-23
+Fecha: 2024-06-23
 
 ## Estado
 Aceptado

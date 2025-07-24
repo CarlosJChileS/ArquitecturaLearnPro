@@ -1,0 +1,4 @@
+node_modules
+api-gateway/public/node_modules
+api-gateway/public/dist
+**/*.log

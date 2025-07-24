@@ -1,0 +1,301 @@
+openapi: 3.0.0
+info:
+  title: LearnPro API
+  version: 1.0.0
+  description: API documentation for the LearnPro subscription platform.
+servers:
+  - url: http://localhost:8080
+paths:
+  /auth/register:
+    post:
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+                fullName:
+                  type: string
+      responses:
+        '201':
+          description: User created
+        '400':
+          description: Validation error
+  /auth/login:
+    post:
+      summary: Log in a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+        '401':
+          description: Invalid credentials
+  /products:
+    get:
+      summary: List available courses
+      parameters:
+        - in: header
+          name: x-user-id
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of courses
+    post:
+      summary: Create a new course
+      parameters:
+        - in: header
+          name: x-user-role
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                plan:
+                  type: string
+      responses:
+        '201':
+          description: Course created
+  /products/{id}:
+    get:
+      summary: Get course by id
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Course details
+        '404':
+          description: Course not found
+    put:
+      summary: Update a course
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: header
+          name: x-user-role
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Course updated
+    delete:
+      summary: Delete a course
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: header
+          name: x-user-role
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Course deleted
+  /progress/{userId}:
+    get:
+      summary: Get progress for a user
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Progress list
+  /progress:
+    post:
+      summary: Add progress entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Entry created
+  /categories:
+    get:
+      summary: List categories
+      responses:
+        '200':
+          description: Category list
+  /users/{id}:
+    get:
+      summary: Get user by id
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User details
+        '404':
+          description: User not found
+  /payments/stripe:
+    post:
+      summary: Create Stripe checkout session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: URL of Stripe session
+  /payments/stripe/session/{sessionId}:
+    get:
+      summary: Verify a Stripe session
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Payment status
+  /payments/paypal:
+    post:
+      summary: Create PayPal order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Approval URL
+  /subscriptions:
+    get:
+      summary: List subscriptions
+      responses:
+        '200':
+          description: Subscription list
+    post:
+      summary: Add subscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Subscription created
+  /subscriptions/{id}:
+    get:
+      summary: Get subscription
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Subscription data
+    put:
+      summary: Update subscription
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: x-user-role
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Subscription updated
+    delete:
+      summary: Remove subscription
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: x-user-role
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Subscription deleted
+  /notifications/{userId}:
+    get:
+      summary: Get notifications for a user
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Notification list
+  /notifications:
+    post:
+      summary: Add a notification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Notification created

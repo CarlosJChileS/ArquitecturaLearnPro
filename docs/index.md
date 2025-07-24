@@ -21,3 +21,5 @@ database/           # scripts SQL y datos de ejemplo
 ```
 
 Para detalles de ejecucion consulta el README principal. En esta carpeta se incluyen ademas el [modelo C4](c4-model.md) y las [ADR](adr) que recogen las decisiones de arquitectura.
+
+La especificación de la API en formato OpenAPI se encuentra en [swagger.yaml](swagger.yaml) y puede visualizarse ejecutando el servidor y visitando `/api-docs`.

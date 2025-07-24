@@ -4,6 +4,11 @@ const express = require('express');
 const path = require('path');
 const app = express();
 
+// Swagger setup
+const swaggerUi = require('swagger-ui-express');
+const YAML = require('yamljs');
+const swaggerDocument = YAML.load(path.join(__dirname, '../docs/swagger.yaml'));
+
 
 
 app.use(express.json());
@@ -11,6 +16,9 @@ app.use(express.json());
 // Serve built frontend if available
 const frontendPath = path.join(__dirname, 'public', 'dist');
 app.use(express.static(frontendPath));
+
+// Swagger documentation route
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Middleware
 const subscriptionAccess = require("../shared/middleware/subscriptionAccess");
