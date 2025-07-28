@@ -2,13 +2,31 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
+// Función para obtener variables de entorno dinámicamente
+const getEnvVar = (key: string): string => {
+  // En desarrollo, usar import.meta.env
+  if (import.meta.env.DEV) {
+    return import.meta.env[key] || '';
+  }
+  
+  // En producción, usar window.ENV si está disponible
+  if (typeof window !== 'undefined' && (window as any).ENV) {
+    return (window as any).ENV[key] || '';
+  }
+  
+  // Fallback a import.meta.env
+  return import.meta.env[key] || '';
+};
+
 // Usar variables de entorno - sin fallbacks hardcodeados por seguridad
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const SUPABASE_URL = getEnvVar('VITE_SUPABASE_URL');
+const SUPABASE_PUBLISHABLE_KEY = getEnvVar('VITE_SUPABASE_ANON_KEY');
 
 // Validación de variables de entorno
 if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-  throw new Error('Missing Supabase environment variables. Please check your .env.local file.');
+  console.warn('Missing Supabase environment variables. Please check your configuration.');
+  console.log('SUPABASE_URL:', SUPABASE_URL ? '✓ Set' : '✗ Missing');
+  console.log('SUPABASE_PUBLISHABLE_KEY:', SUPABASE_PUBLISHABLE_KEY ? '✓ Set' : '✗ Missing');
 }
 
 // Import the supabase client like this:

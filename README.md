@@ -2,7 +2,79 @@
 
 Una plataforma simple de cursos online hecha con React + Supabase.
 
-##  Despliegue en Google Cloud Run
+## 🚀 Despliegue en Google Cloud Run
+
+### ⚡ Solo 3 pasos:
+
+1. **Abre Google Cloud Shell:**
+   - Ve a [console.cloud.google.com](https://console.cloud.google.com)
+   - Haz clic en el ícono de terminal
+
+2. **Clona y despliega:**
+   ```bash
+   git clone https://github.com/CarlosJChileS/ArquitecturaLearnPro.git
+   cd ArquitecturaLearnPro
+   chmod +x deploy.sh
+   ./deploy.sh
+   ```
+
+3. **Configura tus variables de Supabase:**
+   ```bash
+   gcloud run services update learnpro-app --region europe-west1 \
+     --set-env-vars "VITE_SUPABASE_URL=https://xfuhbjqqlgfxxkjvezhy.supabase.co,VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhmdWhianFxbGdmeHhranZlemh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMwOTQ2MzgsImV4cCI6MjA2ODY3MDYzOH0.EFZFZyDF7eR1rkXCgZq-Q-B96I_H9XP1ulQsyzAyVOI"
+   ```
+
+**🎉 ¡Listo!** Tu app estará funcionando en minutos.
+
+## 🏠 Desarrollo Local
+
+```bash
+npm install
+npm run dev
+```
+
+Crea un archivo `.env.local`:
+```
+VITE_SUPABASE_URL=https://xfuhbjqqlgfxxkjvezhy.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhmdWhianFxbGdmeHhranZlemh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMwOTQ2MzgsImV4cCI6MjA2ODY3MDYzOH0.EFZFZyDF7eR1rkXCgZq-Q-B96I_H9XP1ulQsyzAyVOI
+```
+
+## 🔐 Admin
+
+- URL: `tu-app.com/admin-login`
+- Email: `carlosjchiles@gmail.com`
+- Contraseña: La que configures en Supabase
+
+## 🛠️ Tecnologías
+
+- React + TypeScript + Vite
+- Tailwind CSS + shadcn/ui
+- Supabase (base de datos + auth)
+- Google Cloud Run
+
+## 🔧 Solución de Problemas
+
+### Pantalla en blanco después del despliegue
+Si tu app aparece en blanco, verifica que las variables de entorno estén configuradas:
+
+```bash
+# Verificar variables actuales
+gcloud run services describe learnpro-app --region europe-west1
+
+# Configurar variables si faltan
+gcloud run services update learnpro-app --region europe-west1 \
+  --set-env-vars "VITE_SUPABASE_URL=tu-url,VITE_SUPABASE_ANON_KEY=tu-key"
+```
+
+### Debug en la consola del navegador
+Abre las herramientas de desarrollador (F12) y verifica:
+- Si aparecen errores en la consola
+- Si el archivo `/env-config.js` se carga correctamente
+- Si las variables `window.ENV` están definidas
+
+---
+
+**Hecho por un estudiante 📚**
 
 ### ⚡ Solo 3 pasos:
 
