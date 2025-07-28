@@ -1,40 +1,31 @@
-# Multi-stage build para optimizar el tamaño final
-FROM node:18-alpine as builder
+# Build stage
+FROM node:18-alpine as build
 
-# Establecer el directorio de trabajo
 WORKDIR /app
 
-# Copiar archivos de configuración de dependencias
+# Copy package files
 COPY package*.json ./
 
-# Instalar todas las dependencias (incluyendo devDependencies para el build)
-RUN npm ci && npm cache clean --force
+# Install ALL dependencies (needed for build)
+RUN npm install
 
-# Copiar el código fuente (excluyendo archivos innecesarios via .dockerignore)
+# Copy source code
 COPY . .
 
-# Construir la aplicación para producción
-# Las variables de entorno se inyectarán en tiempo de ejecución via Cloud Run
+# Build the app
 RUN npm run build
 
-# Etapa de producción con nginx optimizado
+# Production stage
 FROM nginx:alpine
 
-# Instalar curl para health checks
-RUN apk add --no-cache curl
+# Copy built files
+COPY --from=build /app/dist /usr/share/nginx/html
 
-# Copiar archivos construidos desde la etapa anterior
-COPY --from=builder /app/dist /usr/share/nginx/html
-
-# Copiar configuración personalizada de nginx
+# Copy nginx config
 COPY nginx.conf /etc/nginx/nginx.conf
 
-# Exponer el puerto 8080 (requerido por Cloud Run)
+# Expose port
 EXPOSE 8080
 
-# Health check para Cloud Run
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8080/ || exit 1
-
-# Comando para iniciar nginx
+# Start nginx
 CMD ["nginx", "-g", "daemon off;"]
