@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
-import ProtectedRoute from "@/components/ProtectedRoute";
+
 import Index from "./pages/Index";
 import Courses from "./pages/Courses";
 import CourseDetail from "./pages/CourseDetail";
@@ -49,27 +49,15 @@ const App = () => (
               <Route path="/subscription" element={<Subscription />} />
               <Route 
                 path="/dashboard" 
-                element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                } 
+                element={<Dashboard />} 
               />
               <Route 
                 path="/profile" 
-                element={
-                  <ProtectedRoute>
-                    <Profile />
-                  </ProtectedRoute>
-                } 
+                element={<Profile />} 
               />
               <Route 
                 path="/checkout" 
-                element={
-                  <ProtectedRoute>
-                    <Checkout />
-                  </ProtectedRoute>
-                } 
+                element={<Checkout />} 
               />
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/admin-login" element={<AdminLogin />} />
@@ -80,27 +68,15 @@ const App = () => (
               <Route path="/admin/users" element={<AdminUsers />} />
               <Route 
                 path="/exam/:examId" 
-                element={
-                  <ProtectedRoute>
-                    <ExamPage />
-                  </ProtectedRoute>
-                } 
+                element={<ExamPage />} 
               />
               <Route 
                 path="/exam-results/:attemptId" 
-                element={
-                  <ProtectedRoute>
-                    <ExamResults />
-                  </ProtectedRoute>
-                } 
+                element={<ExamResults />} 
               />
               <Route 
                 path="/certificate/:certificateNumber" 
-                element={
-                  <ProtectedRoute>
-                    <CertificateView />
-                  </ProtectedRoute>
-                } 
+                element={<CertificateView />} 
               />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

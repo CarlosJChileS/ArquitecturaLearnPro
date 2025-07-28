@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Clock, Users, Star, Play } from "lucide-react";
 import CoursePreviewModal from "./CoursePreviewModal";
 import { useEdgeFunction } from "@/hooks/useEdgeFunctions";
-import { useAuth } from "@/contexts/AuthContext";
+
 
 interface Course {
   id: string;
@@ -124,7 +124,6 @@ const CourseCatalog = () => {
   const [categories, setCategories] = useState<string[]>(["Todos"]);
   const [selectedCategory, setSelectedCategory] = useState("Todos");
   const [loading, setLoading] = useState(true);
-  const { hasActiveSubscription } = useAuth();
 
   const { execute: getAllCourses } = useEdgeFunction('course', 'getAllCourses');
   const { execute: getCategories } = useEdgeFunction('course', 'getCategories');

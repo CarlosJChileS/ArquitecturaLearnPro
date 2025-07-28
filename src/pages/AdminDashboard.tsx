@@ -103,7 +103,7 @@ interface AdminStats {
 }
 
 const AdminDashboard: React.FC = () => {
-  const { user, profile, loading } = useAuth();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [users, setUsers] = useState<User[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -225,21 +225,13 @@ const AdminDashboard: React.FC = () => {
   });
 
   useEffect(() => {
-    if (user && profile?.role === 'admin') {
+    if (user) {
       loadDashboardData();
     }
-  }, [user, profile]);
+  }, [user]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
-      </div>
-    );
-  }
-
-  if (!user || profile?.role !== 'admin') {
-    return <Navigate to="/dashboard" replace />;
+  if (!user) {
+    return <Navigate to="/login" replace />;
   }
 
   const loadDashboardData = async () => {
@@ -981,7 +973,7 @@ const AdminDashboard: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {loading ? (
+                {false ? (
                   <div className="text-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
                   </div>
@@ -1546,7 +1538,7 @@ const AdminDashboard: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {loading ? (
+                {false ? (
                   <div className="text-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
                   </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,7 +37,12 @@ interface CourseFilters {
 }
 
 const CoursesPage: React.FC = () => {
-  const { user, hasActiveSubscription } = useAuth();
+  const { user } = useAuth();
+  const { subscription } = useSubscription();
+  const hasActiveSubscription =
+    subscription.subscribed &&
+    subscription.subscription_end &&
+    new Date(subscription.subscription_end) > new Date();
   const navigate = useNavigate();
   const [courses, setCourses] = useState<Course[]>([]);
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);

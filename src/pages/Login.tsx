@@ -16,29 +16,19 @@ const Login = () => {
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
-  const { signIn, user, profile, loading } = useAuth();
+  const { signIn, user, loading } = useAuth();
 
   const from = location.state?.from?.pathname || "/dashboard";
 
   useEffect(() => {
-    console.log('Login useEffect - User:', user?.email, 'Profile:', profile?.role, 'Loading:', loading);
+    console.log('Login useEffect - User:', user?.email, 'Loading:', loading);
     
-    if (user && profile && !loading) {
-      // Redirigir según el rol del usuario
-      console.log('Redirecting user with role:', profile.role);
-      
-      if (profile.role === 'admin') {
-        console.log('Redirecting to admin dashboard');
-        navigate("/admin", { replace: true });
-      } else if (profile.role === 'instructor') {
-        console.log('Redirecting to instructor dashboard');
-        navigate("/instructor", { replace: true });
-      } else {
-        console.log('Redirecting to default dashboard');
-        navigate(from, { replace: true });
-      }
+    if (user && !loading) {
+      // Redirigir inmediatamente cuando hay usuario autenticado
+      console.log('User authenticated, redirecting to dashboard');
+      navigate(from, { replace: true });
     }
-  }, [user, profile, loading, navigate, from]);
+  }, [user, loading, navigate, from]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

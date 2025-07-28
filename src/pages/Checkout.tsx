@@ -259,8 +259,8 @@ const Checkout = () => {
                     <span>€{selectedPlan.price}{selectedPlan.period}</span>
                   </div>
 
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     form="checkout-form"
                     className="w-full bg-gradient-primary hover:opacity-90 transition-opacity"
                     onClick={handleSubmit}
@@ -268,6 +268,15 @@ const Checkout = () => {
                     <Lock className="h-4 w-4 mr-2" />
                     Completar Suscripción
                   </Button>
+
+                  <div className="flex flex-col space-y-2 mt-2">
+                    <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                      Pagar con PayPal
+                    </Button>
+                    <Button className="w-full bg-purple-600 hover:bg-purple-700">
+                      Pagar con Stripe
+                    </Button>
+                  </div>
 
                   <div className="text-center">
                     <p className="text-xs text-muted-foreground">

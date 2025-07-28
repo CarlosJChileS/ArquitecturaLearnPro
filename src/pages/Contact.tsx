@@ -170,8 +170,7 @@ const Contact = () => {
                         <div>
                           <h3 className="font-medium">Dirección</h3>
                           <p className="text-muted-foreground">
-                            Calle Gran Vía, 123<br />
-                            28013 Madrid, España
+                            Manta, Ecuador
                           </p>
                         </div>
                       </div>

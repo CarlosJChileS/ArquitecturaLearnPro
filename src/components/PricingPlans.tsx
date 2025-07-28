@@ -8,6 +8,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const plans = [
   {
@@ -84,6 +85,42 @@ const PricingPlans = () => {
         title: "Error",
         description: "Error al procesar la suscripción. Inténtalo de nuevo.",
         variant: "destructive",
+      });
+    }
+  };
+
+  const handlePayPal = async (amount: number) => {
+    if (!user) {
+      toast({
+        title: "Inicia sesión requerido",
+        description: "Debes iniciar sesión para suscribirte a un plan.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('paypal-payment', {
+        body: { amount },
+      });
+
+      if (error) {
+        toast({
+          title: 'Error',
+          description: error.message || 'Error al procesar el pago con PayPal.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (data?.approvalUrl) {
+        window.open(data.approvalUrl as string, '_blank');
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Error al procesar el pago con PayPal.',
+        variant: 'destructive',
       });
     }
   };
@@ -219,18 +256,28 @@ const PricingPlans = () => {
                       </Button>
                     </div>
                   ) : (
-                    <Button 
-                      className={`w-full mb-6 ${
-                        plan.popular 
-                          ? 'bg-gradient-primary hover:opacity-90' 
-                          : 'bg-primary hover:bg-primary/90'
-                      }`}
-                      size="lg"
-                      onClick={() => handleSubscribe(plan.name)}
-                      disabled={loading}
-                    >
-                      {loading ? "Procesando..." : user ? "Suscribirse" : "Iniciar Sesión para Suscribirse"}
-                    </Button>
+                    <div className="flex flex-col space-y-2 mb-6">
+                      <Button
+                        className={`w-full ${
+                          plan.popular
+                            ? 'bg-gradient-primary hover:opacity-90'
+                            : 'bg-primary hover:bg-primary/90'
+                        }`}
+                        size="lg"
+                        onClick={() => handleSubscribe(plan.name)}
+                        disabled={loading}
+                      >
+                        {loading ? 'Procesando...' : user ? 'Pagar con Stripe' : 'Iniciar Sesión'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => handlePayPal(currentPrice)}
+                        disabled={loading}
+                      >
+                        {loading ? 'Procesando...' : 'Pagar con PayPal'}
+                      </Button>
+                    </div>
                   )}
                   
                   <div className="space-y-4">

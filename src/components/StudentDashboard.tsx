@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -39,7 +40,12 @@ interface DashboardStats {
 }
 
 const StudentDashboard: React.FC = () => {
-  const { user, profile, hasActiveSubscription } = useAuth();
+  const { user, profile } = useAuth();
+  const { subscription } = useSubscription();
+  const hasActiveSubscription =
+    subscription.subscribed &&
+    subscription.subscription_end &&
+    new Date(subscription.subscription_end) > new Date();
   const navigate = useNavigate();
   const [enrolledCourses, setEnrolledCourses] = useState<EnrolledCourse[]>([]);
   const [stats, setStats] = useState<DashboardStats>({
@@ -49,12 +55,12 @@ const StudentDashboard: React.FC = () => {
     certificates: 0
   });
 
-  const { execute: getEnrolledCourses, loading: coursesLoading } = useEdgeFunction(
+  const { execute: getEnrolledCourses } = useEdgeFunction(
     'course',
     'getEnrolledCourses'
   );
 
-  const { execute: getDashboardStats, loading: statsLoading } = useEdgeFunction(
+  const { execute: getDashboardStats } = useEdgeFunction(
     'dashboard',
     'getStudentStats'
   );
@@ -104,30 +110,6 @@ const StudentDashboard: React.FC = () => {
     if (progress > 0) return 'Iniciado';
     return 'No iniciado';
   };
-
-  if (coursesLoading || statsLoading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="h-32 bg-gray-200 rounded-lg"></div>
-            <div className="h-32 bg-gray-200 rounded-lg"></div>
-            <div className="h-32 bg-gray-200 rounded-lg"></div>
-            <div className="h-32 bg-gray-200 rounded-lg"></div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="h-64 bg-gray-200 rounded-lg"></div>
-            <div className="h-64 bg-gray-200 rounded-lg"></div>
-            <div className="h-64 bg-gray-200 rounded-lg"></div>
-            <div className="h-64 bg-gray-200 rounded-lg"></div>
-            <div className="h-64 bg-gray-200 rounded-lg"></div>
-            <div className="h-64 bg-gray-200 rounded-lg"></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="container mx-auto px-4 py-8">

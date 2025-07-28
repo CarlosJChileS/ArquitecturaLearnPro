@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { AuthContext } from './AuthContext';
+import { useAuth } from './AuthContext';
 
 interface SubscriptionData {
   subscribed: boolean;
@@ -37,11 +37,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   });
   const [loading, setLoading] = useState(false);
   
-  // Ahora verificar el AuthContext
-  const authContext = useContext(AuthContext);
-  
-  // Usar valores por defecto si AuthContext no está disponible
-  const session = authContext?.session || null;
+  const { session } = useAuth();
 
   const refreshSubscription = async () => {
     if (!session) return;

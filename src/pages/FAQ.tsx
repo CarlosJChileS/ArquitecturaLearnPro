@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useState } from "react";
-import { 
-  Search, HelpCircle, BookOpen, CreditCard, Users, 
-  Shield, Clock, Award, MessageCircle, CheckCircle2
+import {
+  Search, HelpCircle, BookOpen, CreditCard,
+  Shield, Award, MessageCircle, CheckCircle2
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -237,69 +237,6 @@ const FAQ = () => {
           </div>
         </section>
 
-        {/* Quick Help Cards */}
-        <section className="py-16 bg-gray-50">
-          <div className="container mx-auto px-4">
-            <h2 className="text-3xl font-bold text-center mb-12 text-gray-900">
-              ¿Necesitas más ayuda?
-            </h2>
-            
-            <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-              <Card className="text-center hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <MessageCircle className="h-8 w-8 text-blue-600" />
-                  </div>
-                  <CardTitle>Chat en vivo</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600 mb-4">
-                    Habla directamente con nuestro equipo de soporte
-                  </p>
-                  <Button className="w-full bg-blue-600 hover:bg-blue-700">
-                    Iniciar chat
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card className="text-center hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Users className="h-8 w-8 text-green-600" />
-                  </div>
-                  <CardTitle>Comunidad</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600 mb-4">
-                    Únete a nuestra comunidad de estudiantes
-                  </p>
-                  <Button variant="outline" className="w-full">
-                    Ir al foro
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card className="text-center hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Clock className="h-8 w-8 text-purple-600" />
-                  </div>
-                  <CardTitle>Soporte email</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600 mb-4">
-                    Envíanos un email y te responderemos en 24h
-                  </p>
-                  <Link to="/contact">
-                    <Button variant="outline" className="w-full">
-                      Contactar
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </section>
       </main>
       
       <Footer />

@@ -1,6 +1,14 @@
 import { serve } from "https://deno.land/std@0.203.0/http/server.ts";
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
 serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
   try {
     const body = await req.json();
     const amount = body.amount;
@@ -36,7 +44,8 @@ serve(async (req) => {
     if (!response.ok) {
       const text = await response.text();
       return new Response(text, {
-        status: response.status
+        status: response.status,
+        headers: corsHeaders,
       });
     }
 
@@ -47,15 +56,20 @@ serve(async (req) => {
       approvalUrl: approve?.href
     }), {
       headers: {
-        'Content-Type': 'application/json'
-      }
+        'Content-Type': 'application/json',
+        ...corsHeaders,
+      },
     });
   } catch (err) {
     console.error('PayPal function error:', err);
     return new Response(JSON.stringify({
       error: err.message
     }), {
-      status: 500
+      status: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        ...corsHeaders,
+      },
     });
   }
 });

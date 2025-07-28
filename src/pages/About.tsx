@@ -11,33 +11,40 @@ import { Link } from "react-router-dom";
 
 const team = [
   {
-    name: "Ana García",
-    role: "CEO & Fundadora",
-    bio: "Ex-directora de tecnología en Google España. Apasionada por democratizar la educación.",
+    name: "Luis Figueroa",
+    role: "CEO",
+    bio: "Apasionado por llevar la educación a todos.",
     image: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=300&h=300&fit=crop&crop=face",
-    linkedin: "#"
+    linkedin: "#",
   },
   {
-    name: "Carlos Rodríguez",
+    name: "Carlos Chile",
     role: "CTO",
-    bio: "Arquitecto de software con 15 años de experiencia. Lideró equipos en Facebook y Microsoft.",
+    bio: "Enfocado en crear soluciones escalables.",
     image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=300&h=300&fit=crop&crop=face",
-    linkedin: "#"
+    linkedin: "#",
   },
   {
-    name: "María López",
+    name: "Ginger Perez",
     role: "Head of Education",
-    bio: "Ex-profesora universitaria y diseñadora de currículos. PhD en Pedagogía Digital.",
+    bio: "Experta en estrategias educativas digitales.",
     image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=300&h=300&fit=crop&crop=face",
-    linkedin: "#"
+    linkedin: "#",
   },
   {
-    name: "David Martín",
+    name: "Anthony Mejia",
     role: "Head of Growth",
-    bio: "Especialista en marketing digital y growth hacking. Ex-Spotify y Airbnb.",
+    bio: "Especialista en marketing digital y growth hacking.",
     image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=300&fit=crop&crop=face",
-    linkedin: "#"
-  }
+    linkedin: "#",
+  },
+  {
+    name: "Rossana Ochoa",
+    role: "Marketing",
+    bio: "Comprometida con impulsar la comunidad de LearnPro.",
+    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=300&fit=crop&crop=face",
+    linkedin: "#",
+  },
 ];
 
 const stats = [
@@ -239,16 +246,6 @@ const About = () => {
               {team.map((member, index) => (
                 <Card key={index} className="text-center hover:shadow-lg transition-shadow">
                   <CardContent className="pt-6">
-                    <div className="relative mb-6">
-                      <img 
-                        src={member.image} 
-                        alt={member.name}
-                        className="w-24 h-24 rounded-full mx-auto object-cover"
-                      />
-                      <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                        <Star className="w-4 h-4 text-white fill-current" />
-                      </div>
-                    </div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-1">
                       {member.name}
                     </h3>

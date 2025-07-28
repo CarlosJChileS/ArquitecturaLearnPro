@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,15 +14,32 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
 export default function Profile() {
+  const { profile, updateProfile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
-  const [profile, setProfile] = useState({
-    name: "Ana García",
-    email: "ana.garcia@email.com",
-    bio: "Passionate about technology and continuous learning. Currently specializing in web development and data science.",
-    joinDate: "Enero 2024",
-    location: "Madrid, España",
-    website: "https://anagarcia.dev"
+  const [formProfile, setFormProfile] = useState({
+    name: "",
+    email: "",
+    bio: "",
+    joinDate: "",
+    location: "",
+    website: "",
   });
+
+  useEffect(() => {
+    if (profile) {
+      setFormProfile({
+        name: profile.full_name ?? "",
+        email: profile.email ?? "",
+        bio: "",
+        joinDate: new Date(profile.created_at).toLocaleDateString('es-ES', {
+          year: 'numeric',
+          month: 'long',
+        }),
+        location: "",
+        website: "",
+      });
+    }
+  }, [profile]);
 
   const achievements = [
     { id: 1, title: "First Course Completed", description: "Completed your first course", earned: "2024-01-15", icon: BookOpen },
@@ -42,9 +60,12 @@ export default function Profile() {
     skillsLearned: 24
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    await updateProfile({
+      full_name: formProfile.name,
+      email: formProfile.email,
+    });
     setIsEditing(false);
-    // Here you would typically save to a backend
   };
 
   return (
@@ -59,8 +80,10 @@ export default function Profile() {
               <CardHeader className="text-center">
                 <div className="relative mx-auto mb-4">
                   <Avatar className="w-32 h-32 mx-auto">
-                    <AvatarImage src="/placeholder.svg" alt={profile.name} />
-                    <AvatarFallback className="text-2xl">AG</AvatarFallback>
+                    <AvatarImage src="/placeholder.svg" alt={formProfile.name} />
+                    <AvatarFallback className="text-2xl">
+                      {formProfile.name.slice(0, 2).toUpperCase() || 'US'}
+                    </AvatarFallback>
                   </Avatar>
                   <Button
                     size="sm"
@@ -70,14 +93,14 @@ export default function Profile() {
                     <Camera className="w-4 h-4" />
                   </Button>
                 </div>
-                <CardTitle className="text-2xl">{profile.name}</CardTitle>
+                <CardTitle className="text-2xl">{formProfile.name}</CardTitle>
                 <CardDescription className="flex items-center justify-center gap-2">
                   <Mail className="w-4 h-4" />
-                  {profile.email}
+                  {formProfile.email}
                 </CardDescription>
                 <CardDescription className="flex items-center justify-center gap-2">
                   <Calendar className="w-4 h-4" />
-                  Miembro desde {profile.joinDate}
+                  Miembro desde {formProfile.joinDate}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -255,8 +278,8 @@ export default function Profile() {
                         <Label htmlFor="name">Nombre completo</Label>
                         <Input
                           id="name"
-                          value={profile.name}
-                          onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+                          value={formProfile.name}
+                          onChange={(e) => setFormProfile({ ...formProfile, name: e.target.value })}
                           disabled={!isEditing}
                         />
                       </div>
@@ -265,8 +288,8 @@ export default function Profile() {
                         <Input
                           id="email"
                           type="email"
-                          value={profile.email}
-                          onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                          value={formProfile.email}
+                          onChange={(e) => setFormProfile({ ...formProfile, email: e.target.value })}
                           disabled={!isEditing}
                         />
                       </div>
@@ -277,8 +300,8 @@ export default function Profile() {
                       <Textarea
                         id="bio"
                         rows={4}
-                        value={profile.bio}
-                        onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
+                        value={formProfile.bio}
+                        onChange={(e) => setFormProfile({ ...formProfile, bio: e.target.value })}
                         disabled={!isEditing}
                         placeholder="Cuéntanos sobre ti..."
                       />
@@ -289,8 +312,8 @@ export default function Profile() {
                         <Label htmlFor="location">Ubicación</Label>
                         <Input
                           id="location"
-                          value={profile.location}
-                          onChange={(e) => setProfile({ ...profile, location: e.target.value })}
+                          value={formProfile.location}
+                          onChange={(e) => setFormProfile({ ...formProfile, location: e.target.value })}
                           disabled={!isEditing}
                         />
                       </div>
@@ -298,8 +321,8 @@ export default function Profile() {
                         <Label htmlFor="website">Sitio web</Label>
                         <Input
                           id="website"
-                          value={profile.website}
-                          onChange={(e) => setProfile({ ...profile, website: e.target.value })}
+                          value={formProfile.website}
+                          onChange={(e) => setFormProfile({ ...formProfile, website: e.target.value })}
                           disabled={!isEditing}
                         />
                       </div>
