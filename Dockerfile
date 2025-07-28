@@ -10,13 +10,11 @@ COPY package*.json ./
 # Instalar dependencias (incluyendo devDependencies para el build)
 RUN npm ci && npm cache clean --force
 
-# Copiar variables de entorno de producción
-COPY .env.production .env.local
-
 # Copiar el código fuente
 COPY . .
 
 # Construir la aplicación para producción
+# Las variables de entorno se pasarán en tiempo de ejecución via Cloud Run
 RUN npm run build
 
 # Etapa de producción con nginx

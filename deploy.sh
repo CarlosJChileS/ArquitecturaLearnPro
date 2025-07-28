@@ -10,10 +10,10 @@ PROJECT_ID="tu-project-id"
 SERVICE_NAME="learnpro-app"
 REGION="us-central1"
 
-# Variables de entorno para la aplicación
-SUPABASE_URL="https://xfuhbjqqlgfxxkjvezhy.supabase.co"
-SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhmdWhianFxbGdmeHhranZlemh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMwOTQ2MzgsImV4cCI6MjA2ODY3MDYzOH0.EFZFZyDF7eR1rkXCgZq-Q-B96I_H9XP1ulQsyzAyVOI"
-STRIPE_PUBLISHABLE_KEY="pk_test_51RnmE4CBD94NZhoQpLTmmEkmqwe9NxZVTbnVYZ5RYHBteMUawAHaO6U07teBTAVOzPQ36OK4LY7JRaZhA7UQ3AX300wfY5Xb4q"
+# Variables de entorno para la aplicación - CONFIGURA TUS VALORES REALES
+SUPABASE_URL="your_supabase_url_here"
+SUPABASE_ANON_KEY="your_supabase_anon_key_here"
+STRIPE_PUBLISHABLE_KEY="your_stripe_publishable_key_here"
 # ================================================
 
 IMAGE_NAME="gcr.io/$PROJECT_ID/$SERVICE_NAME"

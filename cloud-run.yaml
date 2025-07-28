@@ -27,11 +27,11 @@ spec:
         - name: PORT
           value: "8080"
         - name: VITE_SUPABASE_URL
-          value: "https://xfuhbjqqlgfxxkjvezhy.supabase.co"
+          value: "your_supabase_url_here"
         - name: VITE_SUPABASE_ANON_KEY
-          value: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhmdWhianFxbGdmeHhranZlemh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMwOTQ2MzgsImV4cCI6MjA2ODY3MDYzOH0.EFZFZyDF7eR1rkXCgZq-Q-B96I_H9XP1ulQsyzAyVOI"
+          value: "your_supabase_anon_key_here"
         - name: VITE_STRIPE_PUBLISHABLE_KEY
-          value: "pk_test_51RnmE4CBD94NZhoQpLTmmEkmqwe9NxZVTbnVYZ5RYHBteMUawAHaO6U07teBTAVOzPQ36OK4LY7JRaZhA7UQ3AX300wfY5Xb4q"
+          value: "your_stripe_publishable_key_here"
         resources:
           limits:
             cpu: "1"
