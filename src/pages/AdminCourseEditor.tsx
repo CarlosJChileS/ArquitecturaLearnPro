@@ -71,6 +71,12 @@ interface AssignmentRubric {
   max_points: number;
 }
 
+interface TextSection {
+  id: string;
+  title: string;
+  content: string;
+}
+
 interface Exam {
   id: string;
   title: string;
@@ -144,6 +150,7 @@ interface CourseData {
   // Estructura
   modules: Module[];
   final_exam?: Exam;
+  text_sections: TextSection[];
   
   // Metadatos
   tags: string[];
@@ -239,6 +246,12 @@ const AdminCourseEditor = () => {
     thumbnail_url: "",
     trailer_url: "",
     course_images: [],
+
+    // Texto por secciones
+    text_sections: [],
+
+    // Examen final
+    final_exam: undefined,
     
     // Configuración
     instructor_id: user?.id || "",
@@ -530,6 +543,93 @@ const AdminCourseEditor = () => {
     });
   };
 
+  const addTextSection = () => {
+    const newSection: TextSection = {
+      id: Date.now().toString(),
+      title: "Nueva Sección",
+      content: ""
+    };
+    setCourseData({
+      ...courseData,
+      text_sections: [...courseData.text_sections, newSection]
+    });
+  };
+
+  const updateTextSection = (index: number, field: keyof TextSection, value: string) => {
+    const updated = courseData.text_sections.map((sec, i) =>
+      i === index ? { ...sec, [field]: value } : sec
+    );
+    setCourseData({ ...courseData, text_sections: updated });
+  };
+
+  const removeTextSection = (index: number) => {
+    setCourseData({
+      ...courseData,
+      text_sections: courseData.text_sections.filter((_, i) => i !== index)
+    });
+  };
+
+  const toggleFinalExam = (enabled: boolean) => {
+    if (enabled) {
+      const newExam: Exam = {
+        id: Date.now().toString(),
+        title: "",
+        description: "",
+        type: 'final',
+        time_limit_minutes: 60,
+        max_attempts: 1,
+        passing_score: 70,
+        questions: [],
+        randomize_questions: false,
+        show_results_immediately: true
+      };
+      setCourseData({ ...courseData, final_exam: newExam });
+    } else {
+      setCourseData({ ...courseData, final_exam: undefined });
+    }
+  };
+
+  const addExamQuestion = () => {
+    if (!courseData.final_exam) return;
+    const newQuestion: QuizQuestion = {
+      id: Date.now().toString(),
+      question: '',
+      type: 'multiple_choice',
+      options: ['', '', '', ''],
+      correct_answer: '',
+      points: 1
+    };
+    setCourseData({
+      ...courseData,
+      final_exam: {
+        ...courseData.final_exam,
+        questions: [...courseData.final_exam.questions, newQuestion]
+      }
+    });
+  };
+
+  const updateExamQuestion = (index: number, question: QuizQuestion) => {
+    if (!courseData.final_exam) return;
+    const updated = courseData.final_exam.questions.map((q, i) =>
+      i === index ? question : q
+    );
+    setCourseData({
+      ...courseData,
+      final_exam: { ...courseData.final_exam, questions: updated }
+    });
+  };
+
+  const removeExamQuestion = (index: number) => {
+    if (!courseData.final_exam) return;
+    setCourseData({
+      ...courseData,
+      final_exam: {
+        ...courseData.final_exam,
+        questions: courseData.final_exam.questions.filter((_, i) => i !== index)
+      }
+    });
+  };
+
   if (!user || profile?.role !== 'admin') {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -682,6 +782,33 @@ const AdminCourseEditor = () => {
                       />
                     </div>
 
+                    <div className="space-y-2">
+                      <Label>Secciones de Texto</Label>
+                      <div className="space-y-4">
+                        {courseData.text_sections.map((section, index) => (
+                          <div key={section.id} className="border p-3 rounded space-y-2">
+                            <Input
+                              value={section.title}
+                              onChange={(e) => updateTextSection(index, 'title', e.target.value)}
+                              placeholder="Título de la sección"
+                            />
+                            <Textarea
+                              value={section.content}
+                              onChange={(e) => updateTextSection(index, 'content', e.target.value)}
+                              rows={3}
+                              placeholder="Contenido"
+                            />
+                            <Button variant="destructive" size="sm" onClick={() => removeTextSection(index)}>
+                              Eliminar
+                            </Button>
+                          </div>
+                        ))}
+                        <Button variant="outline" size="sm" onClick={addTextSection}>
+                          <Plus className="h-4 w-4 mr-2" />Agregar Sección
+                        </Button>
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <div className="space-y-2">
                         <Label htmlFor="level">Nivel</Label>
@@ -742,9 +869,9 @@ const AdminCourseEditor = () => {
                       <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                         {courseData.thumbnail_url ? (
                           <div className="space-y-4">
-                            <img 
-                              src={courseData.thumbnail_url} 
-                              alt="Preview" 
+                            <img
+                              src={courseData.thumbnail_url}
+                              alt="Preview"
                               className="mx-auto h-32 w-48 object-cover rounded"
                             />
                             <Button variant="outline" onClick={() => setCourseData({...courseData, thumbnail_url: ""})}>
@@ -755,8 +882,8 @@ const AdminCourseEditor = () => {
                           <div className="space-y-4">
                             <Image className="mx-auto h-12 w-12 text-gray-400" />
                             <div>
-                              <Button 
-                                variant="outline" 
+                              <Button
+                                variant="outline"
                                 onClick={() => setCourseData({...courseData, thumbnail_url: "/placeholder.svg"})}
                               >
                                 <Upload className="h-4 w-4 mr-2" />
@@ -769,6 +896,16 @@ const AdminCourseEditor = () => {
                           </div>
                         )}
                       </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="trailer">URL del Video de Presentación</Label>
+                      <Input
+                        id="trailer"
+                        value={courseData.trailer_url}
+                        onChange={(e) => setCourseData({...courseData, trailer_url: e.target.value})}
+                        placeholder="https://..."
+                      />
                     </div>
                   </CardContent>
                 </Card>
@@ -943,18 +1080,158 @@ const AdminCourseEditor = () => {
                           <Plus className="h-4 w-4" />
                         </Button>
                       </div>
-                      <div className="flex flex-wrap gap-2">
-                        {courseData.tags.map((tag, index) => (
-                          <Badge key={`tag-${tag}-${index}`} variant="secondary" className="flex items-center space-x-1">
-                            <span>{tag}</span>
-                            <X 
-                              className="h-3 w-3 cursor-pointer" 
-                              onClick={() => removeArrayItem('tags', index)}
-                            />
-                          </Badge>
-                        ))}
-                      </div>
+                    <div className="flex flex-wrap gap-2">
+                      {courseData.tags.map((tag, index) => (
+                        <Badge key={`tag-${tag}-${index}`} variant="secondary" className="flex items-center space-x-1">
+                          <span>{tag}</span>
+                          <X
+                            className="h-3 w-3 cursor-pointer"
+                            onClick={() => removeArrayItem('tags', index)}
+                          />
+                        </Badge>
+                      ))}
                     </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <Label>Agregar Examen Final</Label>
+                      <Switch
+                        checked={!!courseData.final_exam}
+                        onCheckedChange={(checked) => toggleFinalExam(checked)}
+                      />
+                    </div>
+
+                    {courseData.final_exam && (
+                      <div className="space-y-4 border rounded p-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Título del Examen</Label>
+                            <Input
+                              value={courseData.final_exam.title}
+                              onChange={(e) =>
+                                setCourseData({
+                                  ...courseData,
+                                  final_exam: {
+                                    ...courseData.final_exam!,
+                                    title: e.target.value
+                                  }
+                                })
+                              }
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Puntaje Mínimo (%)</Label>
+                            <Input
+                              type="number"
+                              value={courseData.final_exam.passing_score}
+                              onChange={(e) =>
+                                setCourseData({
+                                  ...courseData,
+                                  final_exam: {
+                                    ...courseData.final_exam!,
+                                    passing_score: Number(e.target.value)
+                                  }
+                                })
+                              }
+                              min="0"
+                              max="100"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Tiempo Límite (minutos)</Label>
+                            <Input
+                              type="number"
+                              value={courseData.final_exam.time_limit_minutes}
+                              onChange={(e) =>
+                                setCourseData({
+                                  ...courseData,
+                                  final_exam: {
+                                    ...courseData.final_exam!,
+                                    time_limit_minutes: Number(e.target.value)
+                                  }
+                                })
+                              }
+                              min="0"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Intentos Máximos</Label>
+                            <Input
+                              type="number"
+                              value={courseData.final_exam.max_attempts}
+                              onChange={(e) =>
+                                setCourseData({
+                                  ...courseData,
+                                  final_exam: {
+                                    ...courseData.final_exam!,
+                                    max_attempts: Number(e.target.value)
+                                  }
+                                })
+                              }
+                              min="1"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-lg font-medium">Preguntas</h4>
+                            <Button size="sm" onClick={addExamQuestion}>
+                              <Plus className="h-4 w-4 mr-2" />Agregar Pregunta
+                            </Button>
+                          </div>
+
+                          {courseData.final_exam.questions.map((q, qi) => (
+                            <Card key={q.id} className="p-4">
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <h5 className="font-medium">Pregunta {qi + 1}</h5>
+                                  <Button size="sm" variant="outline" onClick={() => removeExamQuestion(qi)}>
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>Pregunta</Label>
+                                  <Textarea
+                                    value={q.question}
+                                    onChange={(e) =>
+                                      updateExamQuestion(qi, { ...q, question: e.target.value })
+                                    }
+                                    rows={2}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>Opciones</Label>
+                                  {q.options?.map((op, oi) => (
+                                    <div key={oi} className="flex items-center space-x-2">
+                                      <input
+                                        type="radio"
+                                        name={`correct-${qi}`}
+                                        checked={q.correct_answer === op}
+                                        onChange={() =>
+                                          updateExamQuestion(qi, { ...q, correct_answer: op })
+                                        }
+                                      />
+                                      <Input
+                                        value={op}
+                                        onChange={(e) => {
+                                          const newOpts = [...(q.options || [])];
+                                          newOpts[oi] = e.target.value;
+                                          updateExamQuestion(qi, { ...q, options: newOpts });
+                                        }}
+                                        placeholder={`Opción ${oi + 1}`}
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </Card>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   </CardContent>
                 </Card>
               )}
@@ -1022,6 +1299,18 @@ const CoursePreview = ({ courseData }: { courseData: CourseData }) => {
             </div>
           </div>
 
+          {courseData.text_sections.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Secciones de Texto</h3>
+              {courseData.text_sections.map((sec) => (
+                <div key={sec.id} className="border p-3 rounded">
+                  <h4 className="font-medium">{sec.title}</h4>
+                  <p className="text-sm text-gray-700 whitespace-pre-line">{sec.content}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Contenido del Curso</h3>
             {courseData.modules.map((module, index) => (
@@ -1049,6 +1338,15 @@ const CoursePreview = ({ courseData }: { courseData: CourseData }) => {
               </Card>
             ))}
           </div>
+
+          {courseData.final_exam && (
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold">Examen Final</h3>
+              <p className="text-gray-600 text-sm">
+                {courseData.final_exam.questions.length} preguntas • Puntaje mínimo {courseData.final_exam.passing_score}%
+              </p>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

@@ -109,119 +109,47 @@ const CourseDetail: React.FC = () => {
         // Mock data for development
         const mockCourse: Course = {
           id: courseId!,
-          title: 'Desarrollo Web Full Stack con React y Node.js',
-          description: 'Aprende a crear aplicaciones web completas desde cero con las tecnologías más demandadas',
-          long_description: 'Este curso completo te enseñará todo lo necesario para convertirte en un desarrollador web full stack. Comenzaremos con los fundamentos de HTML, CSS y JavaScript, para luego profundizar en React para el frontend y Node.js para el backend. También aprenderás sobre bases de datos, autenticación, deployment y mejores prácticas de desarrollo.',
-          instructor_name: 'Ana García Martínez',
-          instructor_bio: 'Desarrolladora Senior con más de 8 años de experiencia en tecnologías web. Ha trabajado en empresas como Google y Microsoft, y ahora se dedica a enseñar desarrollo web.',
+          title: 'Curso Demo',
+          description: 'Descripción breve',
+          long_description: 'Detalles de demostración',
+          instructor_name: 'Demo Instructor',
+          instructor_bio: '',
           instructor_avatar: '/placeholder.svg',
-          category: 'Desarrollo Web',
-          level: 'intermediate',
-          subscription_tier: 'premium',
-          duration_hours: 45,
-          total_lessons: 156,
-          total_students: 2847,
-          rating: 4.8,
-          rating_count: 423,
+          category: 'General',
+          level: 'beginner',
+          subscription_tier: 'free',
+          duration_hours: 1,
+          total_lessons: 1,
+          total_students: 0,
+          rating: 5,
+          rating_count: 1,
           thumbnail_url: '/placeholder.svg',
-          trailer_url: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-          features: [
-            '45 horas de contenido en video',
-            'Código fuente incluido',
-            'Certificado de finalización',
-            'Acceso de por vida',
-            'Soporte del instructor',
-            'Proyectos prácticos'
-          ],
-          requirements: [
-            'Conocimientos básicos de programación',
-            'Computadora con acceso a internet',
-            'Ganas de aprender y practicar',
-            'No se requiere experiencia previa en web'
-          ],
-          what_you_learn: [
-            'Crear aplicaciones web responsivas con React',
-            'Desarrollar APIs REST con Node.js y Express',
-            'Trabajar con bases de datos MongoDB',
-            'Implementar autenticación y autorización',
-            'Desplegar aplicaciones en la nube',
-            'Mejores prácticas de desarrollo'
-          ],
+          trailer_url: '',
+          features: ['Ejemplo'],
+          requirements: ['Ninguno'],
+          what_you_learn: ['Aprender'],
           modules: [
             {
               id: '1',
-              title: 'Fundamentos de Desarrollo Web',
-              description: 'HTML, CSS y JavaScript básico',
+              title: 'Introducción',
+              description: '',
               order_index: 1,
               lessons: [
                 {
                   id: '1',
-                  title: 'Introducción al curso',
-                  duration_minutes: 15,
+                  title: 'Lección demo',
+                  duration_minutes: 5,
                   order_index: 1,
                   is_free: true,
                   completed: false,
-                  type: 'video'
+                  type: 'video',
                 },
-                {
-                  id: '2',
-                  title: 'Configuración del entorno',
-                  duration_minutes: 25,
-                  order_index: 2,
-                  is_free: true,
-                  completed: false,
-                  type: 'video'
-                },
-                {
-                  id: '3',
-                  title: 'HTML5 semántico',
-                  duration_minutes: 45,
-                  order_index: 3,
-                  is_free: false,
-                  completed: false,
-                  type: 'video'
-                }
-              ]
+              ],
             },
-            {
-              id: '2',
-              title: 'React Fundamentals',
-              description: 'Componentes, hooks y estado',
-              order_index: 2,
-              lessons: [
-                {
-                  id: '4',
-                  title: 'Introducción a React',
-                  duration_minutes: 30,
-                  order_index: 1,
-                  is_free: false,
-                  completed: false,
-                  type: 'video'
-                },
-                {
-                  id: '5',
-                  title: 'Componentes y JSX',
-                  duration_minutes: 40,
-                  order_index: 2,
-                  is_free: false,
-                  completed: false,
-                  type: 'video'
-                },
-                {
-                  id: '6',
-                  title: 'Hooks: useState y useEffect',
-                  duration_minutes: 50,
-                  order_index: 3,
-                  is_free: false,
-                  completed: false,
-                  type: 'video'
-                }
-              ]
-            }
           ],
           created_at: '2024-01-01T00:00:00Z',
-          updated_at: '2024-01-15T00:00:00Z',
-          published: true
+          updated_at: '2024-01-01T00:00:00Z',
+          published: true,
         };
         setCourse(mockCourse);
       }

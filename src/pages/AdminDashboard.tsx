@@ -48,8 +48,10 @@ interface Course {
   published: boolean;
   created_at: string;
   thumbnail_url?: string;
+  intro_video_url?: string;
   duration_hours?: number;
   has_final_exam?: boolean;
+  text_sections?: string[];
   lessons_count?: number;
 }
 
@@ -131,8 +133,10 @@ const AdminDashboard: React.FC = () => {
     instructor_id: '',
     published: false,
     thumbnail_url: '',
+    intro_video_url: '',
     duration_hours: 0,
-    has_final_exam: false
+    has_final_exam: false,
+    text_sections: [] as string[]
   });
 
   // Lesson form state
@@ -476,6 +480,39 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleIntroVideoUpload = async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('bucket', 'course-intro-videos');
+
+      const result = await uploadFile(formData);
+      if (result.data?.url) {
+        setCourseForm({ ...courseForm, intro_video_url: result.data.url });
+      }
+    } catch (error) {
+      console.error('Error uploading intro video:', error);
+    }
+  };
+
+  const addTextSection = () => {
+    setCourseForm({
+      ...courseForm,
+      text_sections: [...courseForm.text_sections, '']
+    });
+  };
+
+  const updateTextSection = (index: number, text: string) => {
+    const sections = [...courseForm.text_sections];
+    sections[index] = text;
+    setCourseForm({ ...courseForm, text_sections: sections });
+  };
+
+  const removeTextSection = (index: number) => {
+    const sections = courseForm.text_sections.filter((_, i) => i !== index);
+    setCourseForm({ ...courseForm, text_sections: sections });
+  };
+
   // Lesson Management Functions
   const handleCreateLesson = async () => {
     if (!selectedCourse) return;
@@ -578,9 +615,12 @@ const AdminDashboard: React.FC = () => {
       instructor_id: '', // Would be populated from course data
       published: course.published,
       thumbnail_url: course.thumbnail_url || '',
+      intro_video_url: course.intro_video_url || '',
       duration_hours: course.duration_hours || 0,
-      has_final_exam: course.has_final_exam || false
+      has_final_exam: course.has_final_exam || false,
+      text_sections: course.text_sections || []
     });
+    setShowExamForm(course.has_final_exam || false);
     
     // Load lessons for this course
     loadCourseLessons(course.id);
@@ -902,11 +942,30 @@ const AdminDashboard: React.FC = () => {
                       }}
                     />
                     {courseForm.thumbnail_url && (
-                      <img 
-                        src={courseForm.thumbnail_url} 
-                        alt="Thumbnail" 
+                      <img
+                        src={courseForm.thumbnail_url}
+                        alt="Thumbnail"
                         className="w-12 h-12 object-cover rounded"
                       />
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="course-intro-video">Video Introductorio</Label>
+                  <div className="flex items-center space-x-2">
+                    <Input
+                      id="course-intro-video"
+                      type="file"
+                      accept="video/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleIntroVideoUpload(file);
+                      }}
+                    />
+                    {courseForm.intro_video_url && (
+                      <video controls className="w-24 h-12">
+                        <source src={courseForm.intro_video_url} type="video/mp4" />
+                      </video>
                     )}
                   </div>
                 </div>
@@ -920,13 +979,35 @@ const AdminDashboard: React.FC = () => {
                     rows={3}
                   />
                 </div>
+                <div className="md:col-span-2 space-y-2">
+                  <Label>Secciones de Texto</Label>
+                  {courseForm.text_sections.map((section, idx) => (
+                    <div key={`section-${idx}`} className="flex items-start space-x-2">
+                      <Textarea
+                        value={section}
+                        onChange={(e) => updateTextSection(idx, e.target.value)}
+                        rows={2}
+                        className="flex-1"
+                      />
+                      <Button variant="outline" size="sm" onClick={() => removeTextSection(idx)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button variant="outline" size="sm" onClick={addTextSection}>
+                    <Plus className="h-4 w-4 mr-2" /> Agregar Sección
+                  </Button>
+                </div>
                 <div className="md:col-span-2 flex items-center space-x-4">
                   <div className="flex items-center space-x-2">
                     <input
                       type="checkbox"
                       id="has-final-exam"
                       checked={courseForm.has_final_exam}
-                      onChange={(e) => setCourseForm({ ...courseForm, has_final_exam: e.target.checked })}
+                      onChange={(e) => {
+                        setCourseForm({ ...courseForm, has_final_exam: e.target.checked });
+                        setShowExamForm(e.target.checked);
+                      }}
                       className="rounded"
                     />
                     <Label htmlFor="has-final-exam">Incluir examen final</Label>

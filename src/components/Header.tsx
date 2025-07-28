@@ -3,6 +3,7 @@ import { GraduationCap, Menu, Search, User, LogOut } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import NotificationBell from "./NotificationBell";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -77,6 +78,8 @@ const Header = () => {
                 />
               </div>
             </div>
+
+            <NotificationBell />
             
             {user ? (
               <div className="hidden md:flex items-center space-x-3">

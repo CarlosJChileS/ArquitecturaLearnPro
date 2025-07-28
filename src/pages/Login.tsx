@@ -16,19 +16,28 @@ const Login = () => {
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
-  const { signIn, user, loading } = useAuth();
+  
+  // Manejo robusto del contexto
+  let authContext;
+  try {
+    authContext = useAuth();
+  } catch (error) {
+    console.error('Error accessing AuthContext:', error);
+    // Fallback: redirigir a home y recargar
+    window.location.href = '/';
+    return <div>Cargando...</div>;
+  }
+  
+  const { signIn, user, loading, profile } = authContext;
 
   const from = location.state?.from?.pathname || "/dashboard";
 
   useEffect(() => {
-    console.log('Login useEffect - User:', user?.email, 'Loading:', loading);
-    
-    if (user && !loading) {
-      // Redirigir inmediatamente cuando hay usuario autenticado
-      console.log('User authenticated, redirecting to dashboard');
-      navigate(from, { replace: true });
+    if (user && profile && !loading) {
+      const destination = profile.role === 'admin' ? '/admin/dashboard' : from;
+      navigate(destination, { replace: true });
     }
-  }, [user, loading, navigate, from]);
+  }, [user, profile, loading, navigate, from]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

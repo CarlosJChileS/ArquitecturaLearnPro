@@ -1,430 +1,223 @@
-# 🎓 LearnPro - Plataforma de Cursos Online
+# 🎓 Academia Online - Plataforma de Cursos en Línea
 
-Una plataforma simple de cursos online hecha con React + Supabase.
+Una plataforma completa de cursos en línea construida con React, TypeScript, Supabase y Edge Functions.
 
-## 🚀 Despliegue en Google Cloud Run
+## 🚀 Edge Functions Implementadas (30 funciones)
 
-### ⚡ Solo 3 pasos:
+### **💰 Pagos y Suscripciones**
+- `stripe-checkout` - Procesar checkout de Stripe
+- `stripe-payment` - Manejar pagos de Stripe  
+- `create-subscription` - Crear suscripciones
+- `cancel-subscription` - Cancelar suscripciones
+- `webhook-stripe` - Webhooks de Stripe
 
-1. **Abre Google Cloud Shell:**
-   - Ve a [console.cloud.google.com](https://console.cloud.google.com)
-   - Haz clic en el ícono de terminal
+### **📊 Dashboard y Analytics**
+- `student-dashboard` - Dashboard completo para estudiantes
+- `course-analytics` - Analytics de cursos
+- `instructor-analytics` - Métricas para instructores
+- `get-course-analytics` - Obtener analytics específicos
+- `generate-course-analytics` - Generar reportes
+- `advanced-reports` - Reportes avanzados del sistema
 
-2. **Clona y despliega:**
-   ```bash
-   git clone https://github.com/CarlosJChileS/ArquitecturaLearnPro.git
-   cd ArquitecturaLearnPro
-   chmod +x deploy.sh
-   ./deploy.sh
-   ```
+### **📚 Gestión de Cursos**
+- `course-management` - Gestión completa de cursos
+- `manage-course-content` - Gestionar contenido
+- `validate-course-content` - Validar contenido
+- `admin-lessons` - Administración de lecciones
+- `admin-courses` - Administración de cursos
+- `admin-categories` - Administración de categorías
 
-3. **Configura tus variables de Supabase:**
-   ```bash
-   gcloud run services update learnpro-app --region europe-west1 \
-     --set-env-vars "VITE_SUPABASE_URL=https://xfuhbjqqlgfxxkjvezhy.supabase.co,VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhmdWhianFxbGdmeHhranZlemh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMwOTQ2MzgsImV4cCI6MjA2ODY3MDYzOH0.EFZFZyDF7eR1rkXCgZq-Q-B96I_H9XP1ulQsyzAyVOI"
-   ```
+### **📧 Notificaciones y Email**
+- `send-notification-email` - Sistema avanzado de emails
+- `send-email-notification` - Notificaciones por email
+- `send-course-reminder` - Recordatorios de cursos
+- `send-course-reminders` - Procesar recordatorios automáticos
+- `process-reminders` - Procesar recordatorios automáticos
+- `notifications-api` - API de notificaciones
 
-**🎉 ¡Listo!** Tu app estará funcionando en minutos.
+### **🎓 Certificados y Archivos**
+- `generate-certificate` - Generar certificados HTML
+- `process-completion-certificates` - Procesar certificados automáticamente
+- `upload-file` - Subida de archivos
+- `admin-storage` - Gestión de almacenamiento
 
-## 🏠 Desarrollo Local
+### **🔧 Sistema y Administración**
+- `backup-system` - Sistema de backups completo
+- `health-check` - Verificación de salud del sistema
+- `database-cleanup` - Limpieza automática de base de datos
 
+## ⚡ Configuración Rápida
+
+### 1. Configuración Inicial
 ```bash
-npm install
-npm run dev
+# Windows
+.\setup.ps1
+
+# Linux/Mac
+./setup.sh
 ```
 
-Crea un archivo `.env.local`:
-```
-VITE_SUPABASE_URL=https://xfuhbjqqlgfxxkjvezhy.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhmdWhianFxbGdmeHhranZlemh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMwOTQ2MzgsImV4cCI6MjA2ODY3MDYzOH0.EFZFZyDF7eR1rkXCgZq-Q-B96I_H9XP1ulQsyzAyVOI
-```
-
-## 🔐 Admin
-
-- URL: `tu-app.com/admin-login`
-- Email: `carlosjchiles@gmail.com`
-- Contraseña: La que configures en Supabase
-
-## 🛠️ Tecnologías
-
-- React + TypeScript + Vite
-- Tailwind CSS + shadcn/ui
-- Supabase (base de datos + auth)
-- Google Cloud Run
-
-## 🔧 Solución de Problemas
-
-### Pantalla en blanco después del despliegue
-Si tu app aparece en blanco, verifica que las variables de entorno estén configuradas:
-
+### 2. Desplegar Edge Functions
 ```bash
-# Verificar variables actuales
-gcloud run services describe learnpro-app --region europe-west1
+# Windows
+.\supabase\deploy-functions.ps1
 
-# Configurar variables si faltan
-gcloud run services update learnpro-app --region europe-west1 \
-  --set-env-vars "VITE_SUPABASE_URL=tu-url,VITE_SUPABASE_ANON_KEY=tu-key"
+# Linux/Mac
+./supabase/deploy-functions.sh
 ```
 
-### Debug en la consola del navegador
-Abre las herramientas de desarrollador (F12) y verifica:
-- Si aparecen errores en la consola
-- Si el archivo `/env-config.js` se carga correctamente
-- Si las variables `window.ENV` están definidas
-
----
-
-**Hecho por un estudiante 📚**
-
-### ⚡ Solo 3 pasos:
-
-1. **Abre Google Cloud Shell:**
-   - Ve a [console.cloud.google.com](https://console.cloud.google.com)
-   - Haz clic en el ícono de terminal
-
-2. **Clona y despliega:**
-   ```bash
-   git clone https://github.com/CarlosJChileS/ArquitecturaLearnPro.git
-   cd ArquitecturaLearnPro
-   chmod +x deploy.sh
-   ./deploy.sh
-   ```
-
-3. **Configura tus variables de Supabase:**
-   ```bash
-   gcloud run services update learnpro-app --region europe-west1 \
-     --set-env-vars "VITE_SUPABASE_URL=https://tu-proyecto.supabase.co,VITE_SUPABASE_ANON_KEY=tu-anon-key"
-   ```
-
-**🎉 ¡Listo!** Tu app estará funcionando en minutos.
-
-## 🏠 Desarrollo Local
-
-```bash
-npm install
-npm run dev
-```
-
-Crea un archivo `.env.local`:
-```
-VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
-VITE_SUPABASE_ANON_KEY=tu-anon-key
-```
-
-## � Admin
-
-- URL: `tu-app.com/admin-login`
-- Email: `carlosjchiles@gmail.com`
-- Contraseña: La que configures en Supabase
-
-## 🛠️ Tecnologías
-
-- React + TypeScript + Vite
-- Tailwind CSS + shadcn/ui
-- Supabase (base de datos + auth)
-- Google Cloud Run
-
----
-
-**Hecho por un estudiante 📚**
-
-### Requisitos para despliegue:itos Previos
-
-Antes de comenzar, asegúrate de tener instalado:
-
-- **Node.js** (versión 18 o superior) - [Descargar aquí](https://nodejs.org/)
-- **npm** (incluido con Node.js) o **yarn**
-- **Git** - [Descargar aquí](https://git-scm.com/)
-
-### Verificar instalación:
-```bash
-node --version
-npm --version
-git --version
-```
-
-## 🚀 Instalación y Configuración
-
-### 1. Clonar el repositorio
-```bash
-git clone https://github.com/CarlosJChileS/arquitecturaconjunto.git
-cd arquitecturaconjunto
-```
-
-### 2. Instalar dependencias
-```bash
-npm install
-```
-
-### 3. Configurar variables de entorno (Opcional)
-Las variables ya están preconfiguradas en `.env.production` para funcionar out-of-the-box.
-
-Para desarrollo local, puedes crear un archivo `.env.local` para personalizar:
-
-```bash
-# Supabase Configuration (ya configurado)
-VITE_SUPABASE_URL=tu_supabase_url
-VITE_SUPABASE_ANON_KEY=tu_supabase_anon_key
-
-# App Configuration
-VITE_APP_URL=http://localhost:8083
-```
-
-## 🚀 Ejecutar el Proyecto
-
-### 🏠 Desarrollo Local
-```bash
-npm run dev
-```
-La aplicación se abrirá en: http://localhost:8083
-
-### 🐳 Con Docker (Producción Local)
-```bash
-# Construir y ejecutar
-docker build -t learnpro-app .
-docker run -p 8080:8080 learnpro-app
-
-# O usar docker-compose
-docker-compose up
-```
-La aplicación se abrirá en: http://localhost:8080
-
-## ☁️ Despliegue en Cloud Run
-
-### 🎯 Opción 1: Cloud Console (Más fácil)
-1. Ve a [Cloud Run](https://console.cloud.google.com/run)
-2. Click "CREATE SERVICE" 
-3. Sube tu código o usa el `Dockerfile`
-4. ¡Listo!
-
-### 🛠️ Opción 2: CLI
-```bash
-# Construir imagen
-./build.sh      # Linux/Mac  
-.\build.ps1     # Windows
-
-# Desplegar
-gcloud run services replace cloud-run.yaml
-```
-
-📋 **Ver guía completa:** [DEPLOY-SIMPLE.md](./DEPLOY-SIMPLE.md)
-
-## 🔑 Credenciales de Administrador
-
-## 🔑 Credenciales de Administrador
-
-Para acceder al panel de administración:
-- URL: `/admin-login` (en cualquier entorno)
-- Email: carlosjchiles@gmail.com
-- Contraseña: (configurar en Supabase Auth)
-
-## 📁 Estructura del Proyecto
-
-```
-arquitecturaconjunto/
-├── src/
-│   ├── components/          # Componentes reutilizables
-│   │   ├── ui/             # Componentes de UI (shadcn)
-│   │   └── ...
-│   ├── pages/              # Páginas de la aplicación
-│   │   ├── AdminLogin.tsx  # Login de administrador
-│   │   ├── AdminDashboard.tsx
-│   │   ├── AdminCourseEditor.tsx
-│   │   └── ...
-│   ├── contexts/           # Contextos de React
-│   ├── hooks/              # Hooks personalizados
-│   ├── lib/               # Utilidades
-│   └── integrations/      # Integraciones (Supabase)
-├── supabase/              # Configuración de Supabase
-│   ├── functions/         # Edge Functions
-│   └── migrations/        # Migraciones SQL
-├── public/                # Archivos estáticos
-├── Dockerfile             # Imagen para producción
-├── docker-compose.yml     # Desarrollo local con Docker
-├── cloud-run.yaml         # Configuración Cloud Run
-├── build.sh / build.ps1   # Scripts de construcción
-├── .env.production        # Variables preconfiguradas
-└── ...
-```
+### 3. Configurar Variables de Entorno
+Ve a **Supabase Dashboard > Settings > Edge Functions** y agrega las variables desde `.env.functions`
 
 ## 🛠️ Tecnologías Utilizadas
 
-- **Frontend:**
-  - React 18 + TypeScript
-  - Vite (Build tool)
-  - Tailwind CSS
-  - shadcn/ui (Componentes)
-  - React Router (Navegación)
-  - React Query (Estado del servidor)
+- **Frontend**: React, TypeScript, Vite, Tailwind CSS, shadcn/ui
+- **Backend**: Supabase, Edge Functions (Deno)
+- **Pagos**: Stripe, PayPal
+- **Email**: Resend
+- **Base de Datos**: PostgreSQL (Supabase)
+- **Autenticación**: Supabase Auth
+- **Storage**: Supabase Storage
 
-- **Backend:**
-  - Supabase (Base de datos + Auth)
-  - Supabase Edge Functions
-  - PostgreSQL
+## 📂 Estructura del Proyecto
 
-- **Pagos:**
-  - Stripe
-  - PayPal
+```
+arquitecturaconjunto/
+├── src/                    # Frontend React
+├── supabase/
+│   ├── functions/         # Edge Functions (30 funciones)
+│   ├── migrations/        # Migraciones de BD
+│   └── config.toml       # Configuración Supabase
+├── scripts/              # Scripts de despliegue
+└── docs/                # Documentación
+```
 
-- **Email:**
-  - Resend
+## 🔐 Características de Seguridad
 
-## 🌟 Características
+- ✅ Autenticación JWT verificada
+- ✅ Roles y permisos (admin/instructor/student)
+- ✅ Políticas RLS en todas las tablas
+- ✅ Verificación de firmas en webhooks
+- ✅ Validación de datos en Edge Functions
 
-- ✅ Sistema de autenticación (usuarios y admin)
-- ✅ Panel de administración completo
-- ✅ Editor de cursos avanzado
-- ✅ Sistema de suscripciones
-- ✅ Procesamiento de pagos
-- ✅ Gestión de usuarios
-- ✅ Responsive design
-- ✅ Dashboard de analytics
+## 📊 Analytics y Reportes
 
-## 📝 Scripts Disponibles
+- **Métricas de Ingresos**: Análisis de pagos y suscripciones
+- **Comportamiento de Usuarios**: Sesiones, vistas de página
+- **Rendimiento de Cursos**: Inscripciones, completación
+- **Dashboard para Instructores**: Métricas personalizadas
+- **Reportes Avanzados**: Exportación en JSON/CSV
 
+## 🎯 Funcionalidades Principales
+
+### Para Estudiantes
+- 📚 Catálogo de cursos con filtros
+- 🎥 Reproductor de video integrado
+- 📈 Seguimiento de progreso
+- 🏆 Certificados automáticos
+- 📱 Dashboard personalizado
+- 💳 Suscripciones y pagos
+
+### Para Instructores
+- ✏️ Editor de cursos avanzado
+- 📊 Analytics detallados
+- 👥 Gestión de estudiantes
+- 📧 Sistema de notificaciones
+- 💰 Reportes de ingresos
+
+### Para Administradores
+- 🔧 Panel de administración completo
+- 👤 Gestión de usuarios y roles
+- 📈 Analytics del sistema
+- 🔄 Backups automáticos
+- 🛡️ Monitoreo de seguridad
+
+## 🚀 Despliegue
+
+### Desarrollo Local
 ```bash
-npm run dev          # Servidor de desarrollo
-npm run build        # Build para producción
-npm run preview      # Preview del build
-npm run lint         # Linter
-npm run type-check   # Verificación de tipos
+# Iniciar Supabase local
+supabase start
+
+# Iniciar frontend
+npm run dev
+
+# Desplegar funciones
+supabase functions deploy
 ```
 
-## 🔧 Configuración Adicional
+### Producción
+1. Configura las variables de entorno en Supabase
+2. Despliega las Edge Functions
+3. Configura los webhooks según `webhooks-config.md`
+4. Despliega el frontend en Vercel/Netlify
 
-### Base de datos Supabase
-1. Ejecutar migraciones en: `supabase/migrations/`
-2. Configurar Row Level Security (RLS)
-3. Subir Edge Functions: `supabase/functions/`
+## 📚 Documentación
 
-### Configurar Stripe (Opcional)
-1. Crear cuenta en Stripe
-2. Configurar webhooks
-3. Agregar claves en `.env.local`
+- [Configuración de Webhooks](supabase/webhooks-config.md)
+- [Variables de Entorno](supabase/.env.functions)
+- [Migraciones de BD](supabase/migrations/)
+- [API de Edge Functions](docs/api.md)
 
-## � Despliegue en Google Cloud Run
+## 🔗 Enlaces Útiles
 
-### Requisitos para despliegue:
-- [Google Cloud CLI](https://cloud.google.com/sdk/docs/install) instalado
-- [Docker](https://docs.docker.com/get-docker/) instalado
-- Proyecto de Google Cloud configurado
-- Facturación habilitada en el proyecto
+- [Supabase Dashboard](https://supabase.com/dashboard)
+- [Stripe Dashboard](https://dashboard.stripe.com)
+- [Documentación Supabase](https://docs.supabase.com)
 
-### 1. Configurar Google Cloud
-```bash
-# Instalar gcloud CLI y autenticarse
-gcloud auth login
-gcloud config set project TU_PROJECT_ID
+## 🤝 Contribuciones
 
-# Habilitar APIs necesarias
-gcloud services enable run.googleapis.com
-gcloud services enable containerregistry.googleapis.com
-```
+1. Fork el proyecto
+2. Crea tu rama de feature (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
+5. Abre un Pull Request
 
-### 2. Configurar variables de entorno para producción
-Edita los scripts `deploy.sh` o `deploy.ps1` y actualiza:
-```bash
-PROJECT_ID="tu-project-id"        # Tu ID de proyecto en Google Cloud
-SERVICE_NAME="learnpro-app"       # Nombre del servicio
-REGION="us-central1"              # Región de despliegue
-```
+## 📄 Licencia
 
-### 3. Desplegar automáticamente
-
-**En Linux/Mac:**
-```bash
-chmod +x deploy.sh
-./deploy.sh
-```
-
-**En Windows (PowerShell):**
-```powershell
-.\deploy.ps1
-```
-
-### 4. Despliegue manual paso a paso
-```bash
-# 1. Construir imagen
-docker build -t gcr.io/TU_PROJECT_ID/learnpro-app .
-
-# 2. Subir a Container Registry
-docker push gcr.io/TU_PROJECT_ID/learnpro-app
-
-# 3. Desplegar en Cloud Run
-gcloud run deploy learnpro-app \
-  --image gcr.io/TU_PROJECT_ID/learnpro-app \
-  --platform managed \
-  --region us-central1 \
-  --allow-unauthenticated \
-  --port 8080 \
-  --memory 512Mi \
-  --cpu 1 \
-  --min-instances 0 \
-  --max-instances 10
-```
-
-### 5. Configurar variables de entorno en Cloud Run
-```bash
-gcloud run services update learnpro-app \
-  --set-env-vars "VITE_SUPABASE_URL=tu_url,VITE_SUPABASE_ANON_KEY=tu_key" \
-  --region us-central1
-```
-
-### 6. Configurar dominio personalizado (Opcional)
-1. Ve a Cloud Run en la consola de Google Cloud
-2. Selecciona tu servicio
-3. Ve a la pestaña "CUSTOM DOMAINS"
-4. Agrega tu dominio y sigue las instrucciones
-
-## �🐛 Solución de Problemas
-
-### Puerto en uso
-Si el puerto 8083 está ocupado, Vite automáticamente usará el siguiente disponible.
-
-### Error de conexión a Supabase
-Verifica que las variables de entorno estén correctamente configuradas.
-
-### Problemas de instalación
-```bash
-# Limpiar cache y reinstalar
-rm -rf node_modules package-lock.json
-npm install
-```
-
-### Error de construcción Docker
-```bash
-# Verificar que Docker esté ejecutándose
-docker --version
-
-# Limpiar cache de Docker
-docker system prune -a
-```
-
-### Error de despliegue en Cloud Run
-```bash
-# Verificar logs del servicio
-gcloud run services logs read learnpro-app --region=us-central1
-
-# Verificar configuración del proyecto
-gcloud config list
-```
-
-### Variables de entorno en producción
-Asegúrate de configurar todas las variables necesarias en Cloud Run:
-```bash
-gcloud run services update learnpro-app \
-  --set-env-vars "VITE_SUPABASE_URL=https://tu-proyecto.supabase.co" \
-  --set-env-vars "VITE_SUPABASE_ANON_KEY=tu-anon-key" \
-  --region us-central1
-```
-
-## 📞 Soporte
-
-Si tienes problemas o preguntas:
-1. Revisa la documentación de [Supabase](https://supabase.com/docs)
-2. Consulta la documentación de [Vite](https://vitejs.dev/)
-3. Abre un issue en este repositorio
+Este proyecto está bajo la Licencia MIT. Ver `LICENSE` para más detalles.
 
 ---
 
-**Desarrollado con ❤️ usando React + Supabase**
+## How to edit this project
+
+You can edit this project in several ways:
+
+### Use Lovable
+
+Simply open [Lovable](https://lovable.dev/projects/6a4a05c4-befa-49b2-b21a-882f2762f3ab) and start prompting.
+
+You can save a snapshot in order to capture the current state of your repository, and later create a fork from that snapshot to continue building on it.
+
+### Use your preferred IDE
+
+If you want to work locally using your preferred IDE, you can clone this project and push changes. Lovable will remain in sync with your changes.
+
+### Use GitHub Codespaces
+
+- Click on "New codespace" to launch a new Codespace environment.
+- Edit files directly within the Codespace and commit and push your changes once you're done.
+
+## What technologies are used for this project?
+
+This project is built with:
+
+- Vite
+- TypeScript
+- React
+- shadcn-ui
+- Tailwind CSS
+- Supabase
+- Edge Functions
+
+## How can I deploy this project?
+
+Simply open [Lovable](https://lovable.dev/projects/6a4a05c4-befa-49b2-b21a-882f2762f3ab) and click on Share -> Publish.
+
+## Can I connect a custom domain to my Lovable project?
+
+Yes, you can!
+
+To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+
+Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)

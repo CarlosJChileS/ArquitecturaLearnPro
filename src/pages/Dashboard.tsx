@@ -4,13 +4,16 @@ import StudentDashboard from '@/components/StudentDashboard';
 import { Navigate } from 'react-router-dom';
 
 const Dashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, profile, loading } = useAuth();
 
-  if (!user) {
+  if (!user && !loading) {
     return <Navigate to="/login" replace />;
   }
 
-  // Default to student dashboard - sin verificar role
+  if (profile?.role === 'admin') {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+
   return <StudentDashboard />;
 };
 

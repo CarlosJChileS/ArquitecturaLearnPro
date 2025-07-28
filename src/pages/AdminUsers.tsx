@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   Users, Mail, Calendar, Search, Filter, MoreVertical, Eye, Edit, Trash2, 
@@ -21,61 +21,23 @@ import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger 
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
-// Mock data
-const users = [
+// Mock data de ejemplo
+const mockUsers = [
   {
     id: 1,
-    name: "María González",
-    email: "maria@email.com",
-    plan: "Premium",
+    name: "Usuario Ejemplo",
+    email: "demo@example.com",
+    plan: "Free",
     status: "Activo",
-    joinDate: "2024-01-15",
-    lastActivity: "2024-01-20",
-    courses: 5,
-    completedCourses: 2,
-    totalSpent: 79.99,
-    avatar: ""
+    joinDate: "2024-01-01",
+    lastActivity: "2024-01-02",
+    courses: 0,
+    completedCourses: 0,
+    totalSpent: 0,
+    avatar: "",
   },
-  {
-    id: 2,
-    name: "Carlos Rodríguez",
-    email: "carlos@email.com",
-    plan: "Básico",
-    status: "Activo",
-    joinDate: "2024-01-10",
-    lastActivity: "2024-01-19",
-    courses: 3,
-    completedCourses: 1,
-    totalSpent: 9.99,
-    avatar: ""
-  },
-  {
-    id: 3,
-    name: "Ana López",
-    email: "ana@email.com",
-    plan: "Premium",
-    status: "Suspendido",
-    joinDate: "2023-12-20",
-    lastActivity: "2024-01-05",
-    courses: 8,
-    completedCourses: 4,
-    totalSpent: 159.98,
-    avatar: ""
-  },
-  {
-    id: 4,
-    name: "José Martín",
-    email: "jose@email.com",
-    plan: "De por Vida",
-    status: "Activo",
-    joinDate: "2023-11-15",
-    lastActivity: "2024-01-20",
-    courses: 12,
-    completedCourses: 8,
-    totalSpent: 299.99,
-    avatar: ""
-  }
 ];
 
 const AdminUsers = () => {
@@ -85,6 +47,32 @@ const AdminUsers = () => {
   const [statusFilter, setStatusFilter] = useState("Todos");
   const [planFilter, setPlanFilter] = useState("Todos");
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [users, setUsers] = useState<any[]>(mockUsers);
+
+  useEffect(() => {
+    const loadUsers = async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, email, role, created_at');
+      if (!error && data) {
+        const formatted = data.map((u) => ({
+          id: u.user_id,
+          name: u.full_name || 'Sin nombre',
+          email: u.email || '',
+          plan: u.role,
+          status: 'Activo',
+          joinDate: u.created_at,
+          lastActivity: u.created_at,
+          courses: 0,
+          completedCourses: 0,
+          totalSpent: 0,
+          avatar: '',
+        }));
+        setUsers(formatted);
+      }
+    };
+    loadUsers();
+  }, []);
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

@@ -51,8 +51,16 @@ export const paymentService = {
     callEdgeFunction('cancel-subscription', { reason, feedback }),
 
   // Procesar pago con PayPal
-  processPaypalPayment: (orderId: string) => 
+  processPaypalPayment: (orderId: string) =>
     callEdgeFunction('paypal-payment', { orderId }),
+
+  // Procesar pago único con Stripe
+  processStripePayment: (amount: number, planId?: string) =>
+    callEdgeFunction('stripe-payment', { amount, planId }),
+
+  // Crear sesión de checkout (suscripción)
+  createCheckout: (planType: string, planName: string) =>
+    callEdgeFunction('create-checkout', { planType, planName }),
 
   // Portal del cliente (Stripe)
   getCustomerPortal: () => 
@@ -151,8 +159,12 @@ export const dashboardService = {
     callEdgeFunction('dashboard-stats'),
 
   // Analytics de cursos
-  getCourseAnalytics: (courseId?: string, timeframe?: string) => 
+  getCourseAnalytics: (courseId?: string, timeframe?: string) =>
     callEdgeFunction('get-course-analytics', { courseId, timeframe }),
+
+  // Obtener analytics generales de cursos
+  courseAnalytics: (filters?: any) =>
+    callEdgeFunction('course-analytics', filters),
 
   // Generar analytics de cursos
   generateCourseAnalytics: (courseId: string, options?: any) => 
@@ -180,12 +192,24 @@ export const notificationService = {
     callEdgeFunction('notifications-api', { action: 'mark_read', notificationId }),
 
   // Enviar email de notificación
-  sendEmailNotification: (type: string, recipient: string, data?: any) => 
+  sendEmailNotification: (type: string, recipient: string, data?: any) =>
     callEdgeFunction('send-email-notification', { type, recipient, data }),
 
+  // Enviar notificaciones de la plataforma
+  sendNotifications: (payload: any) =>
+    callEdgeFunction('send-notifications', payload),
+
+  // Enviar email de notificación simple
+  sendNotificationEmail: (params: any) =>
+    callEdgeFunction('send-notification-email', params),
+
   // Enviar recordatorio de curso
-  sendCourseReminder: (userId: string, courseId: string, reminderType: string) => 
+  sendCourseReminder: (userId: string, courseId: string, reminderType: string) =>
     callEdgeFunction('send-course-reminder', { userId, courseId, reminderType }),
+
+  // Enviar recordatorios de cursos de manera masiva
+  sendCourseReminders: () =>
+    callEdgeFunction('send-course-reminders'),
 
   // Procesar recordatorios automáticos
   processReminders: () => 

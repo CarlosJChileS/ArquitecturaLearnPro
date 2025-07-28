@@ -18,7 +18,11 @@ type ServiceMethod = (...args: any[]) => Promise<any>;
 // Helper function to get nested method from service object
 const getServiceMethod = (serviceName: keyof typeof edgeFunctions, methodName: string): ServiceMethod => {
   const service = edgeFunctions[serviceName] as any;
-  return service[methodName] as ServiceMethod;
+  const method = service?.[methodName];
+  if (!method) {
+    throw new Error(`Método ${methodName} no existe en el servicio ${serviceName}`);
+  }
+  return method as ServiceMethod;
 };
 
 export const useEdgeFunction = (
@@ -115,6 +119,22 @@ export const useCreateCheckout = (options?: UseEdgeFunctionOptions) => {
   });
 };
 
+export const useStripePayment = (options?: UseEdgeFunctionOptions) => {
+  return useEdgeFunction('payment', 'processStripePayment', {
+    showSuccessToast: true,
+    successMessage: 'Procesando pago...',
+    ...options
+  });
+};
+
+export const useCreateCheckoutSession = (options?: UseEdgeFunctionOptions) => {
+  return useEdgeFunction('payment', 'createCheckout', {
+    showSuccessToast: true,
+    successMessage: 'Creando sesión de checkout...',
+    ...options
+  });
+};
+
 export const useEnrollInCourse = (options?: UseEdgeFunctionOptions) => {
   return useEdgeFunction('course', 'enrollInCourse', {
     showSuccessToast: true,
@@ -124,7 +144,7 @@ export const useEnrollInCourse = (options?: UseEdgeFunctionOptions) => {
 };
 
 export const useCreateCourse = (options?: UseEdgeFunctionOptions) => {
-  return useEdgeFunction('course', 'createCourse', {
+  return useEdgeFunction('admin', 'createCourse', {
     showSuccessToast: true,
     successMessage: 'Curso creado exitosamente',
     ...options
@@ -132,7 +152,7 @@ export const useCreateCourse = (options?: UseEdgeFunctionOptions) => {
 };
 
 export const useUpdateCourse = (options?: UseEdgeFunctionOptions) => {
-  return useEdgeFunction('course', 'updateCourse', {
+  return useEdgeFunction('admin', 'updateCourse', {
     showSuccessToast: true,
     successMessage: 'Curso actualizado exitosamente',
     ...options
@@ -140,7 +160,7 @@ export const useUpdateCourse = (options?: UseEdgeFunctionOptions) => {
 };
 
 export const useDeleteCourse = (options?: UseEdgeFunctionOptions) => {
-  return useEdgeFunction('course', 'deleteCourse', {
+  return useEdgeFunction('admin', 'deleteCourse', {
     showSuccessToast: true,
     successMessage: 'Curso eliminado exitosamente',
     ...options
@@ -175,6 +195,46 @@ export const useSendNotification = (options?: UseEdgeFunctionOptions) => {
   return useEdgeFunction('notification', 'sendNotification', {
     showSuccessToast: true,
     successMessage: 'Notificación enviada exitosamente',
+    ...options
+  });
+};
+
+export const useSendNotifications = (options?: UseEdgeFunctionOptions) => {
+  return useEdgeFunction('notification', 'sendNotifications', {
+    showSuccessToast: true,
+    successMessage: 'Notificaciones enviadas',
+    ...options
+  });
+};
+
+export const useSendNotificationEmail = (options?: UseEdgeFunctionOptions) => {
+  return useEdgeFunction('notification', 'sendNotificationEmail', {
+    showSuccessToast: true,
+    successMessage: 'Email enviado correctamente',
+    ...options
+  });
+};
+
+export const useSendCourseReminder = (options?: UseEdgeFunctionOptions) => {
+  return useEdgeFunction('notification', 'sendCourseReminder', {
+    showSuccessToast: true,
+    successMessage: 'Recordatorio enviado',
+    ...options
+  });
+};
+
+export const useSendCourseReminders = (options?: UseEdgeFunctionOptions) => {
+  return useEdgeFunction('notification', 'sendCourseReminders', {
+    showSuccessToast: true,
+    successMessage: 'Recordatorios procesados',
+    ...options
+  });
+};
+
+export const useCourseAnalytics = (options?: UseEdgeFunctionOptions) => {
+  return useEdgeFunction('dashboard', 'courseAnalytics', {
+    showSuccessToast: false,
+    showErrorToast: true,
     ...options
   });
 };

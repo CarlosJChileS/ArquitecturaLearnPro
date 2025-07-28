@@ -9,6 +9,9 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { CreditCard, Shield, CheckCircle, Lock } from 'lucide-react';
 import { useSearchParams, Link } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const Checkout = () => {
   const [searchParams] = useSearchParams();
@@ -42,6 +45,10 @@ const Checkout = () => {
     }
   } as const;
 
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+
   const selectedPlan = plans[planType as keyof typeof plans];
 
   const handleInputChange = (field: string, value: string) => {
@@ -52,6 +59,45 @@ const Checkout = () => {
     e.preventDefault();
     // Here would be the payment processing logic
     console.log('Processing payment...', { planType, paymentMethod, formData });
+  };
+
+  const handlePayPal = async () => {
+    if (!user) {
+      toast({
+        title: 'Inicia sesión requerido',
+        description: 'Debes iniciar sesión para suscribirte a un plan.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.functions.invoke('paypal-payment', {
+        body: { amount: selectedPlan.price },
+      });
+
+      if (error) {
+        toast({
+          title: 'Error',
+          description: error.message || 'Error al procesar el pago con PayPal.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (data?.approvalUrl) {
+        window.open(data.approvalUrl as string, '_blank');
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Error al procesar el pago con PayPal.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -270,8 +316,12 @@ const Checkout = () => {
                   </Button>
 
                   <div className="flex flex-col space-y-2 mt-2">
-                    <Button className="w-full bg-blue-600 hover:bg-blue-700">
-                      Pagar con PayPal
+                    <Button
+                      className="w-full bg-blue-600 hover:bg-blue-700"
+                      onClick={handlePayPal}
+                      disabled={loading}
+                    >
+                      {loading ? 'Procesando...' : 'Pagar con PayPal'}
                     </Button>
                     <Button className="w-full bg-purple-600 hover:bg-purple-700">
                       Pagar con Stripe

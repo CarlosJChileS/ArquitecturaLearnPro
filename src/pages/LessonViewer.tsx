@@ -74,74 +74,22 @@ const LessonViewer: React.FC = () => {
       // Mock data for development
       const mockCourse: Course = {
         id: courseId,
-        title: "Desarrollo Web Full Stack",
-        instructor_name: "Ana García"
+        title: "Curso Demo",
+        instructor_name: "Demo Instructor",
       };
 
       const mockLessons: Lesson[] = [
         {
           id: "lesson-1",
-          title: "Introducción al desarrollo Full Stack",
-          description: "En esta lección aprenderás qué es el desarrollo full stack y conocerás las tecnologías que usaremos a lo largo del curso.",
-          content: `
-            <h2>¿Qué es el Desarrollo Full Stack?</h2>
-            <p>El desarrollo full stack se refiere a la práctica de trabajar tanto en el frontend (lado del cliente) como en el backend (lado del servidor) de las aplicaciones web.</p>
-            
-            <h3>Tecnologías que aprenderás:</h3>
-            <ul>
-              <li><strong>React</strong> - Para crear interfaces de usuario dinámicas</li>
-              <li><strong>Node.js</strong> - Para el desarrollo del servidor</li>
-              <li><strong>Express</strong> - Framework web para Node.js</li>
-              <li><strong>MongoDB</strong> - Base de datos NoSQL</li>
-              <li><strong>JWT</strong> - Para autenticación segura</li>
-            </ul>
-            
-            <h3>¿Por qué Full Stack?</h3>
-            <p>Ser un desarrollador full stack te permite:</p>
-            <ul>
-              <li>Tener una visión completa del proyecto</li>
-              <li>Ser más versátil en el mercado laboral</li>
-              <li>Crear aplicaciones completas desde cero</li>
-              <li>Entender mejor cómo interactúan frontend y backend</li>
-            </ul>
-          `,
+          title: "Lección de ejemplo",
+          description: "Contenido de demostración",
+          content: "<p>Contenido HTML de ejemplo</p>",
           video_url: "https://www.youtube.com/embed/dQw4w9WgXcQ",
-          duration_minutes: 30,
+          duration_minutes: 5,
           lesson_order: 1,
           content_type: "video",
-          course_id: courseId
+          course_id: courseId,
         },
-        {
-          id: "lesson-2",
-          title: "Configuración del entorno de desarrollo",
-          description: "Instala y configura todas las herramientas necesarias para el desarrollo",
-          content: `
-            <h2>Configuración del Entorno</h2>
-            <p>Antes de comenzar a programar, necesitamos configurar nuestro entorno de desarrollo.</p>
-            
-            <h3>Herramientas necesarias:</h3>
-            <ol>
-              <li><strong>Node.js</strong> - Descargar desde nodejs.org</li>
-              <li><strong>Visual Studio Code</strong> - Editor recomendado</li>
-              <li><strong>Git</strong> - Control de versiones</li>
-              <li><strong>MongoDB Compass</strong> - Para gestionar la base de datos</li>
-            </ol>
-          `,
-          duration_minutes: 45,
-          lesson_order: 2,
-          content_type: "text",
-          course_id: courseId
-        },
-        {
-          id: "lesson-3",
-          title: "Fundamentos de React",
-          description: "Aprende los conceptos básicos de React y JSX",
-          content: "Contenido de React...",
-          duration_minutes: 60,
-          lesson_order: 3,
-          content_type: "video",
-          course_id: courseId
-        }
       ];
 
       const currentLesson = mockLessons.find(l => l.id === lessonId);

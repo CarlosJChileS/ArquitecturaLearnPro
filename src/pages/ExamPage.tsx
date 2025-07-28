@@ -113,65 +113,35 @@ const ExamPage: React.FC = () => {
         // Mock data for development
         const mockExam: Exam = {
           id: examId || '',
-          title: 'Examen Final - Desarrollo Web',
-          description: 'Evaluación de conocimientos sobre React, JavaScript y desarrollo frontend',
+          title: 'Examen de ejemplo',
+          description: 'Preguntas básicas de demostración',
           course_id: '1',
-          course_title: 'Desarrollo Web Full Stack',
-          duration_minutes: 60,
-          total_questions: 10,
-          total_points: 100,
-          passing_score: 70,
-          attempts_allowed: 3,
+          course_title: 'Curso Demo',
+          duration_minutes: 5,
+          total_questions: 2,
+          total_points: 20,
+          passing_score: 10,
+          attempts_allowed: 1,
           time_limit: true,
-          instructions: 'Lee cuidadosamente cada pregunta antes de responder. Una vez iniciado el examen, no podrás pausarlo.',
+          instructions: 'Ejemplo de examen para desarrollo.',
           questions: [
             {
               id: '1',
               type: 'multiple_choice',
-              question: '¿Qué hook de React se utiliza para manejar el estado local en componentes funcionales?',
-              options: ['useEffect', 'useState', 'useContext', 'useReducer'],
-              correct_answer: 'useState',
+              question: '¿Cuál es la capital de Francia?',
+              options: ['Madrid', 'París', 'Londres', 'Roma'],
+              correct_answer: 'París',
               points: 10,
-              explanation: 'useState es el hook básico para manejar estado local en componentes funcionales.'
+              explanation: 'París es la capital de Francia.'
             },
             {
               id: '2',
-              type: 'multiple_select',
-              question: '¿Cuáles de las siguientes son ventajas de React? (Selecciona todas las correctas)',
-              options: [
-                'Virtual DOM para mejor rendimiento',
-                'Componentes reutilizables',
-                'Sintaxis JSX',
-                'Gestión automática de memoria'
-              ],
-              correct_answer: ['Virtual DOM para mejor rendimiento', 'Componentes reutilizables', 'Sintaxis JSX'],
-              points: 15,
-              explanation: 'React ofrece Virtual DOM, componentes reutilizables y JSX. La gestión de memoria es responsabilidad del navegador.'
-            },
-            {
-              id: '3',
               type: 'text',
-              question: '¿Cuál es la diferencia entre props y state en React?',
-              points: 20,
-              explanation: 'Props son datos pasados desde componentes padre, inmutables. State es el estado interno del componente, mutable.'
-            },
-            {
-              id: '4',
-              type: 'multiple_choice',
-              question: '¿Qué método del ciclo de vida se ejecuta después de que el componente se monta?',
-              options: ['componentDidMount', 'componentWillMount', 'componentDidUpdate', 'componentWillUnmount'],
-              correct_answer: 'componentDidMount',
+              question: '¿Qué es React?',
               points: 10,
-              explanation: 'componentDidMount se ejecuta inmediatamente después de que el componente se monta en el DOM.'
+              explanation: 'Biblioteca de JavaScript para construir interfaces.'
             },
-            {
-              id: '5',
-              type: 'essay',
-              question: 'Explica el concepto de "lifting state up" en React y proporciona un ejemplo práctico.',
-              points: 25,
-              explanation: 'Lifting state up significa mover el estado compartido al ancestro común más cercano de los componentes que lo necesitan.'
-            }
-          ]
+          ],
         };
         setExam(mockExam);
         setTimeRemaining(mockExam.duration_minutes * 60);
@@ -231,13 +201,13 @@ const ExamPage: React.FC = () => {
         // Mock result for development
         const mockResult: ExamResult = {
           id: 'result_1',
-          score: 75,
-          percentage: 75,
+          score: 20,
+          percentage: 100,
           passed: true,
-          time_taken: 3200, // 53 minutes
+          time_taken: 60,
           answers: Object.values(answers),
-          feedback: 'Buen trabajo. Has demostrado un sólido entendimiento de los conceptos de React.',
-          certificate_id: 'cert_123'
+          feedback: 'Resultado de ejemplo',
+          certificate_id: 'cert_demo',
         };
         setExamResult(mockResult);
       }
