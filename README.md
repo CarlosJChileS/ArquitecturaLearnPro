@@ -1,49 +1,60 @@
 # 🎓 LearnPro - Plataforma de Cursos Online
 
-Una plataforma moderna de cursos online con panel de administración, sistema de suscripciones y pagos integrados.
+Una plataforma simple de cursos online hecha con React + Supabase.
 
-## 📋 Req## 🚀 Despliegue Automático en Google Cloud Run
+##  Despliegue en Google Cloud Run
 
-### ⚡ Despliegue Express (3 pasos):
+### ⚡ Solo 3 pasos:
 
-1. **Configurar Google Cloud:**
+1. **Abre Google Cloud Shell:**
+   - Ve a [console.cloud.google.com](https://console.cloud.google.com)
+   - Haz clic en el ícono de terminal
+
+2. **Clona y despliega:**
    ```bash
-   gcloud auth login
-   gcloud config set project TU_PROJECT_ID
-   ```
-
-2. **Editar script de despliegue:**
-   Abre `deploy.sh` (Linux/Mac) o `deploy.ps1` (Windows) y cambia:
-   ```bash
-   PROJECT_ID="tu-project-id-real"        # ⚠️ OBLIGATORIO
-   SUPABASE_URL="tu-url-supabase"         # ⚠️ OBLIGATORIO  
-   SUPABASE_ANON_KEY="tu-anon-key"        # ⚠️ OBLIGATORIO
-   ```
-
-3. **Ejecutar despliegue:**
-   ```bash
-   # Linux/Mac
+   git clone https://github.com/CarlosJChileS/ArquitecturaLearnPro.git
+   cd ArquitecturaLearnPro
+   chmod +x deploy.sh
    ./deploy.sh
-   
-   # Windows
-   .\deploy.ps1
    ```
 
-**🎉 ¡Listo!** Tu app estará funcionando en minutos con todas las configuraciones automáticas.
+3. **Configura tus variables de Supabase:**
+   ```bash
+   gcloud run services update learnpro-app --region europe-west1 \
+     --set-env-vars "VITE_SUPABASE_URL=https://tu-proyecto.supabase.co,VITE_SUPABASE_ANON_KEY=tu-anon-key"
+   ```
 
-📋 **Ver guía rápida completa:** [DEPLOY-QUICK.md](./DEPLOY-QUICK.md)
+**🎉 ¡Listo!** Tu app estará funcionando en minutos.
 
-### 🔧 Lo que hace automáticamente el script:
-- ✅ Habilita APIs necesarias
-- ✅ Construye imagen Docker optimizada
-- ✅ Configura todas las variables de entorno
-- ✅ Despliega con configuración de producción
-- ✅ Configura auto-scaling (0-10 instancias)
-- ✅ Habilita acceso público
-- ✅ Configura health checks
-- ✅ Optimiza memoria y CPU
+## 🏠 Desarrollo Local
 
-## 🚀 Despliegue Manual Detallado (Opcional)
+```bash
+npm install
+npm run dev
+```
+
+Crea un archivo `.env.local`:
+```
+VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
+VITE_SUPABASE_ANON_KEY=tu-anon-key
+```
+
+## � Admin
+
+- URL: `tu-app.com/admin-login`
+- Email: `carlosjchiles@gmail.com`
+- Contraseña: La que configures en Supabase
+
+## 🛠️ Tecnologías
+
+- React + TypeScript + Vite
+- Tailwind CSS + shadcn/ui
+- Supabase (base de datos + auth)
+- Google Cloud Run
+
+---
+
+**Hecho por un estudiante 📚**
 
 ### Requisitos para despliegue:itos Previos
 

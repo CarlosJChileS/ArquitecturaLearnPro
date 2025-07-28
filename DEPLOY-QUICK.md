@@ -1,6 +1,65 @@
-# ⚡ CONFIGURACIÓN RÁPIDA - Google Cloud Run Deploy
+# ⚡ Guía de Despliegue Súper Simple
 
-## 🚀 Despliegue en 3 pasos:
+## 🚀 Opción 1: Google Cloud Shell
+
+1. **Abrir Cloud Shell:**
+   - Ve a [Google Cloud Console](https://console.cloud.google.com)
+   - Haz clic en el ícono de terminal
+
+2. **Ejecutar comandos:**
+   ```bash
+   git clone https://github.com/CarlosJChileS/ArquitecturaLearnPro.git
+   cd ArquitecturaLearnPro
+   chmod +x deploy.sh
+   ./deploy.sh
+   ```
+
+3. **Configurar Supabase:**
+   ```bash
+   gcloud run services update learnpro-app --region europe-west1 \
+     --set-env-vars "VITE_SUPABASE_URL=tu-url,VITE_SUPABASE_ANON_KEY=tu-key"
+   ```
+
+## 🖥️ Opción 2: Desde tu computadora
+
+1. **Instalar gcloud CLI:**
+   - [Descargar aquí](https://cloud.google.com/sdk/docs/install)
+
+2. **Autenticarse:**
+   ```bash
+   gcloud auth login
+   ```
+
+3. **Desplegar:**
+   ```bash
+   # Linux/Mac
+   ./deploy.sh
+   
+   # Windows
+   .\deploy.ps1
+   ```
+
+## � Configurar Supabase
+
+1. Ve a [supabase.com](https://supabase.com)
+2. Crea un proyecto
+3. Ve a **Settings** > **API**
+4. Copia la **URL** y **anon key**
+5. Configúralas:
+   ```bash
+   gcloud run services update learnpro-app --region europe-west1 \
+     --set-env-vars "VITE_SUPABASE_URL=https://xyz.supabase.co,VITE_SUPABASE_ANON_KEY=eyJhbGc..."
+   ```
+
+## 🎯 ¡Eso es todo!
+
+Tu app estará en: `https://learnpro-app-xxx.a.run.app`
+
+Admin: `https://learnpro-app-xxx.a.run.app/admin-login`
+
+---
+
+**Simple como debe ser 🎓**
 
 ### 1. Configurar Google Cloud
 ```bash
