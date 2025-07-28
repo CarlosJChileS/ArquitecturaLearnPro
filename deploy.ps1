@@ -12,4 +12,4 @@ gcloud run deploy learnpro-app `
 
 Write-Host "✅ ¡Listo! Tu app está en la URL que aparece arriba" -ForegroundColor Green
 Write-Host "🔧 Ahora configura las variables de entorno:" -ForegroundColor Yellow
-Write-Host 'gcloud run services update learnpro-app --region europe-west1 --set-env-vars "VITE_SUPABASE_URL=tu-url,VITE_SUPABASE_ANON_KEY=tu-key"'
+Write-Host "gcloud run services update learnpro-app --region europe-west1 --set-env-vars `"VITE_SUPABASE_URL=tu-url,VITE_SUPABASE_ANON_KEY=tu-key`""
