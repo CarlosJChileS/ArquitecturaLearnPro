@@ -1,8 +1,16 @@
 // Script para arreglar el perfil de administrador
 const { createClient } = require('@supabase/supabase-js')
 
-const supabaseUrl = 'https://xfuhbjqqlgfxxkjvezhy.supabase.co'
-const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhmdWhianFxbGdmeHhranZlemh5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MzA5NDYzOCwiZXhwIjoyMDY4NjcwNjM4fQ.NJtdJqU5bvjyGe12vmR4CTkcTcgZwmGMB3fizEBv4pE'
+// ⚠️ CONFIGURAR ESTAS VARIABLES ANTES DE EJECUTAR
+const supabaseUrl = process.env.SUPABASE_URL || 'your_supabase_url_here'
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'your_service_role_key_here'
+
+// Validar que las variables estén configuradas
+if (supabaseUrl === 'your_supabase_url_here' || supabaseServiceKey === 'your_service_role_key_here') {
+  console.error('❌ Error: Configura las variables SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY')
+  console.log('Ejemplo: SUPABASE_URL=https://xxx.supabase.co SUPABASE_SERVICE_ROLE_KEY=xxx node fix-admin-profile.js')
+  process.exit(1)
+}
 
 // Crear cliente con service role para operaciones administrativas
 const supabase = createClient(supabaseUrl, supabaseServiceKey)

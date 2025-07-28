@@ -23,9 +23,20 @@ dist-ssr
 *.sln
 *.sw?
 
-# Environment variables
+# Environment variables - NUNCA subir credenciales
 .env
 .env.local
 .env.production
 .env.development
 .env.staging
+.env.test
+
+# Archivos con credenciales sensibles
+**/config/keys.js
+**/config/credentials.*
+**/.env.functions
+*.key
+*.pem
+
+# Logs con posibles credenciales
+*.log

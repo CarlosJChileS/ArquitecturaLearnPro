@@ -502,6 +502,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         title: "¡Bienvenido!",
         description: "Has iniciado sesión correctamente.",
       });
+      
+      // Redirigir según el email del usuario
+      setTimeout(() => {
+        const adminEmails = ['admin@learnpro.com', 'carlosjchiles@gmail.com'];
+        if (adminEmails.includes(email.toLowerCase())) {
+          window.location.href = '/admin/dashboard';
+        } else {
+          window.location.href = '/dashboard';
+        }
+      }, 1000);
     }
 
     return { error };

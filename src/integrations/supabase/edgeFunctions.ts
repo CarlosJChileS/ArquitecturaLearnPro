@@ -1,7 +1,7 @@
 import { supabase } from './client';
 
-// Base URL para las Edge Functions
-const FUNCTIONS_URL = 'https://xfuhbjqqlgfxxkjvezhy.supabase.co/functions/v1';
+// Base URL para las Edge Functions - usar variable de entorno
+const FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
 // Helper para hacer llamadas a Edge Functions
 const callEdgeFunction = async (functionName: string, payload?: any, method = 'POST') => {
