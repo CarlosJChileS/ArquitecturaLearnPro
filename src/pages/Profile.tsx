@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEdgeFunction } from "@/hooks/useEdgeFunctions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -41,23 +42,65 @@ export default function Profile() {
     }
   }, [profile]);
 
-  const achievements = [
-    { id: 1, title: "First Course Completed", description: "Completed your first course", earned: "2024-01-15", icon: BookOpen },
-    { id: 2, title: "Fast Learner", description: "Completed 3 courses in one month", earned: "2024-02-01", icon: Trophy },
-    { id: 3, title: "JavaScript Master", description: "Completed all JavaScript courses", earned: "2024-02-15", icon: Award },
-  ];
+  const [achievements, setAchievements] = useState<any[]>([]);
+  const [certificates, setCertificates] = useState<any[]>([]);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [learningStats, setLearningStats] = useState({
+    totalHours: 0,
+    coursesCompleted: 0,
+    currentStreak: 0,
+    skillsLearned: 0,
+  });
 
-  const certificates = [
-    { id: 1, course: "Complete JavaScript Course", completedDate: "2024-01-15", grade: "95%" },
-    { id: 2, course: "React Fundamentals", completedDate: "2024-02-01", grade: "92%" },
-    { id: 3, course: "Node.js Development", completedDate: "2024-02-15", grade: "88%" },
-  ];
+  const { execute: fetchDashboard } = useEdgeFunction(
+    'dashboard',
+    'getStudentDashboard'
+  );
 
-  const learningStats = {
-    totalHours: 127,
-    coursesCompleted: 8,
-    currentStreak: 15,
-    skillsLearned: 24
+  const { execute: fetchStats } = useEdgeFunction(
+    'dashboard',
+    'getDashboardStats'
+  );
+
+  useEffect(() => {
+    if (profile) {
+      loadExtraData();
+    }
+  }, [profile]);
+
+  const loadExtraData = async () => {
+    try {
+      const statsRes = await fetchStats();
+      if (statsRes.data?.summary) {
+        const summary = statsRes.data.summary;
+        setLearningStats({
+          totalHours: summary.totalStudyHours || 0,
+          coursesCompleted: summary.completedCourses || 0,
+          currentStreak: summary.monthlyLessonsCompleted || 0,
+          skillsLearned: summary.totalCourses || 0,
+        });
+      }
+
+      const dashRes = await fetchDashboard();
+      if (dashRes.data) {
+        setRecentActivity(dashRes.data.recent_activity || []);
+        setCertificates(
+          dashRes.data.certificates?.map((c: any) => ({
+            id: c.id,
+            course: c.courses?.title,
+            completedDate: c.issued_at,
+            grade: c.score ? `${c.score}%` : undefined,
+          })) || []
+        );
+
+        const achievementsFromActivity = (dashRes.data.recent_activity || []).filter(
+          (a: any) => a.event_type === 'achievement'
+        );
+        setAchievements(achievementsFromActivity);
+      }
+    } catch (err) {
+      console.error('Error loading profile data:', err);
+    }
   };
 
   const handleSave = async () => {
@@ -174,27 +217,23 @@ export default function Profile() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-2 h-2 bg-primary rounded-full" />
-                        <div className="flex-1">
-                          <p className="text-sm">Completaste "React Hooks Advanced" - 95%</p>
-                          <p className="text-xs text-muted-foreground">Hace 2 horas</p>
+                      {recentActivity.map((act, idx) => (
+                        <div key={idx} className="flex items-center gap-3">
+                          <div className="w-2 h-2 bg-primary rounded-full" />
+                          <div className="flex-1">
+                            <p className="text-sm">
+                              {act.event_type === 'achievement' && act.event_data?.title
+                                ? `Logro: ${act.event_data.title}`
+                                : act.event_type === 'course_completed' && act.courses?.title
+                                ? `Completaste "${act.courses.title}"`
+                                : act.event_type}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(act.created_at).toLocaleString('es-ES')}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-2 h-2 bg-primary rounded-full" />
-                        <div className="flex-1">
-                          <p className="text-sm">Obtuviste el badge "Fast Learner"</p>
-                          <p className="text-xs text-muted-foreground">Ayer</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-2 h-2 bg-muted rounded-full" />
-                        <div className="flex-1">
-                          <p className="text-sm">Comenzaste "Node.js API Development"</p>
-                          <p className="text-xs text-muted-foreground">Hace 3 días</p>
-                        </div>
-                      </div>
+                      ))}
                     </div>
                   </CardContent>
                 </Card>
@@ -209,24 +248,23 @@ export default function Profile() {
                   </CardHeader>
                   <CardContent>
                     <div className="grid gap-4">
-                      {achievements.map((achievement) => {
-                        const IconComponent = achievement.icon;
-                        return (
-                          <div key={achievement.id} className="flex items-center gap-4 p-4 border rounded-lg">
-                            <div className="p-3 bg-primary/10 rounded-full">
-                              <IconComponent className="w-6 h-6 text-primary" />
-                            </div>
-                            <div className="flex-1">
-                              <h3 className="font-semibold">{achievement.title}</h3>
-                              <p className="text-sm text-muted-foreground">{achievement.description}</p>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                Obtenido el {new Date(achievement.earned).toLocaleDateString()}
-                              </p>
-                            </div>
-                            <Badge variant="secondary">Completado</Badge>
+                      {achievements.map((achievement, idx) => (
+                        <div key={idx} className="flex items-center gap-4 p-4 border rounded-lg">
+                          <div className="p-3 bg-primary/10 rounded-full">
+                            <Star className="w-6 h-6 text-primary" />
                           </div>
-                        );
-                      })}
+                          <div className="flex-1">
+                            <h3 className="font-semibold">{achievement.event_data?.title || achievement.event_type}</h3>
+                            {achievement.event_data?.description && (
+                              <p className="text-sm text-muted-foreground">{achievement.event_data.description}</p>
+                            )}
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {new Date(achievement.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <Badge variant="secondary">Completado</Badge>
+                        </div>
+                      ))}
                     </div>
                   </CardContent>
                 </Card>
@@ -252,17 +290,16 @@ export default function Profile() {
                               <p className="text-sm text-muted-foreground">
                                 Completado el {new Date(cert.completedDate).toLocaleDateString()}
                               </p>
-                              <p className="text-sm text-primary font-medium">Calificación: {cert.grade}</p>
+                              {cert.grade && (
+                                <p className="text-sm text-primary font-medium">Calificación: {cert.grade}</p>
+                              )}
                             </div>
                           </div>
-                          <Button variant="outline" size="sm">
-                            Descargar
-                          </Button>
                         </div>
                       ))}
                     </div>
-                  </CardContent>
-                </Card>
+                 </CardContent>
+               </Card>
               </TabsContent>
 
               {/* Settings Tab */}

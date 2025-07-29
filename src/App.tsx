@@ -22,6 +22,8 @@ import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminCourseEditor from "./pages/AdminCourseEditor";
 import AdminUsers from "./pages/AdminUsers";
+import AdminPlans from "./pages/AdminPlans";
+import AdminSubscriptions from "./pages/AdminSubscriptions";
 import ExamPage from "./pages/ExamPage";
 import ExamResults from "./pages/ExamResults";
 import CertificateView from "./pages/CertificateView";
@@ -68,9 +70,11 @@ const App = () => {
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/courses/:id" element={<AdminCourseEditor />} />
               <Route path="/admin/users" element={<AdminUsers />} />
-              <Route 
-                path="/exam/:examId" 
-                element={<ExamPage />} 
+              <Route path="/admin/plans" element={<AdminPlans />} />
+              <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
+              <Route
+                path="/exam/:examId"
+                element={<ExamPage />}
               />
               <Route 
                 path="/exam-results/:attemptId" 

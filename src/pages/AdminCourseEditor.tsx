@@ -334,6 +334,12 @@ const AdminCourseEditor = () => {
         thumbnail_url: "/placeholder.svg",
         trailer_url: "",
         course_images: [],
+
+        // Texto por secciones
+        text_sections: [],
+
+        // Examen final
+        final_exam: undefined,
         
         // Configuración
         instructor_id: user?.id || "",
@@ -569,24 +575,24 @@ const AdminCourseEditor = () => {
     });
   };
 
-  const toggleFinalExam = (enabled: boolean) => {
-    if (enabled) {
-      const newExam: Exam = {
-        id: Date.now().toString(),
-        title: "",
-        description: "",
-        type: 'final',
-        time_limit_minutes: 60,
-        max_attempts: 1,
-        passing_score: 70,
-        questions: [],
-        randomize_questions: false,
-        show_results_immediately: true
-      };
-      setCourseData({ ...courseData, final_exam: newExam });
-    } else {
-      setCourseData({ ...courseData, final_exam: undefined });
-    }
+  const enableFinalExam = () => {
+    const newExam: Exam = {
+      id: Date.now().toString(),
+      title: "",
+      description: "",
+      type: 'final',
+      time_limit_minutes: 60,
+      max_attempts: 1,
+      passing_score: 70,
+      questions: [],
+      randomize_questions: false,
+      show_results_immediately: true
+    };
+    setCourseData({ ...courseData, final_exam: newExam });
+  };
+
+  const disableFinalExam = () => {
+    setCourseData({ ...courseData, final_exam: undefined });
   };
 
   const addExamQuestion = () => {
@@ -1093,16 +1099,14 @@ const AdminCourseEditor = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Label>Agregar Examen Final</Label>
-                      <Switch
-                        checked={!!courseData.final_exam}
-                        onCheckedChange={(checked) => toggleFinalExam(checked)}
-                      />
-                    </div>
-
-                    {courseData.final_exam && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Label>Agregar Examen Final</Label>
+                        <Switch
+                          checked={!!courseData.final_exam}
+                          onCheckedChange={(checked) => checked ? enableFinalExam() : disableFinalExam()}
+                        />
+                      </div>                    {courseData.final_exam && (
                       <div className="space-y-4 border rounded p-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
@@ -1112,10 +1116,10 @@ const AdminCourseEditor = () => {
                               onChange={(e) =>
                                 setCourseData({
                                   ...courseData,
-                                  final_exam: {
-                                    ...courseData.final_exam!,
+                                  final_exam: courseData.final_exam ? {
+                                    ...courseData.final_exam,
                                     title: e.target.value
-                                  }
+                                  } : undefined
                                 })
                               }
                             />
@@ -1128,10 +1132,10 @@ const AdminCourseEditor = () => {
                               onChange={(e) =>
                                 setCourseData({
                                   ...courseData,
-                                  final_exam: {
-                                    ...courseData.final_exam!,
+                                  final_exam: courseData.final_exam ? {
+                                    ...courseData.final_exam,
                                     passing_score: Number(e.target.value)
-                                  }
+                                  } : undefined
                                 })
                               }
                               min="0"
@@ -1146,10 +1150,10 @@ const AdminCourseEditor = () => {
                               onChange={(e) =>
                                 setCourseData({
                                   ...courseData,
-                                  final_exam: {
-                                    ...courseData.final_exam!,
+                                  final_exam: courseData.final_exam ? {
+                                    ...courseData.final_exam,
                                     time_limit_minutes: Number(e.target.value)
-                                  }
+                                  } : undefined
                                 })
                               }
                               min="0"
@@ -1163,10 +1167,10 @@ const AdminCourseEditor = () => {
                               onChange={(e) =>
                                 setCourseData({
                                   ...courseData,
-                                  final_exam: {
-                                    ...courseData.final_exam!,
+                                  final_exam: courseData.final_exam ? {
+                                    ...courseData.final_exam,
                                     max_attempts: Number(e.target.value)
-                                  }
+                                  } : undefined
                                 })
                               }
                               min="1"
@@ -1204,7 +1208,7 @@ const AdminCourseEditor = () => {
                                 <div className="space-y-2">
                                   <Label>Opciones</Label>
                                   {q.options?.map((op, oi) => (
-                                    <div key={oi} className="flex items-center space-x-2">
+                                    <div key={`option-${qi}-${oi}`} className="flex items-center space-x-2">
                                       <input
                                         type="radio"
                                         name={`correct-${qi}`}

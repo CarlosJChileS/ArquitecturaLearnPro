@@ -2,9 +2,10 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-// Variables directas - funcionará con variables de entorno de Cloud Run
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://xfuhbjqqlgfxxkjvezhy.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhmdWhianFxbGdmeHhranZlemh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMwOTQ2MzgsImV4cCI6MjA2ODY3MDYzOH0.EFZFZyDF7eR1rkXCgZq-Q-B96I_H9XP1ulQsyzAyVOI";
+// Variables directas - funciona también con variables inyectadas en runtime
+const runtimeEnv = (typeof window !== 'undefined' ? (window as any).ENV : {}) || {};
+const SUPABASE_URL = runtimeEnv.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL || "https://xfuhbjqqlgfxxkjvezhy.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = runtimeEnv.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhmdWhianFxbGdmeHhranZlemh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMwOTQ2MzgsImV4cCI6MjA2ODY3MDYzOH0.EFZFZyDF7eR1rkXCgZq-Q-B96I_H9XP1ulQsyzAyVOI";
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";

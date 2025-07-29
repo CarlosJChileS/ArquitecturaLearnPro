@@ -1,7 +1,8 @@
 import { supabase } from './client';
 
-// Base URL para las Edge Functions - usar variable de entorno
-const FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
+// Base URL para las Edge Functions - usar variable de entorno (con fallback runtime)
+const runtimeEnv = (typeof window !== 'undefined' ? (window as any).ENV : {}) || {};
+const FUNCTIONS_URL = `${runtimeEnv.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
 // Helper para hacer llamadas a Edge Functions
 const callEdgeFunction = async (functionName: string, payload?: any, method = 'POST') => {
@@ -72,24 +73,73 @@ export const paymentService = {
 // ========================
 
 export const courseService = {
+  // Obtener todos los cursos publicados (catálogo público)
+  getAllCourses: async () => {
+    const { data, error } = await supabase
+      .from('courses')
+      .select(
+        `id, title, description, thumbnail_url, duration_hours, level, price, is_published, created_at, updated_at,
+         categories(name),
+         profiles:instructor_id(full_name),
+         course_enrollments(count),
+         average_rating` as any
+      )
+      .eq('is_published', true)
+      .order('created_at', { ascending: false });
+
+    if (error) throw new Error(error.message);
+
+    return (
+      data?.map((course: any) => ({
+        id: course.id,
+        title: course.title,
+        description: course.description,
+        image_url: course.thumbnail_url,
+        duration_hours: course.duration_hours ?? 0,
+        instructor_name: course.profiles?.full_name || '',
+        level: course.level ?? 'beginner',
+        category: course.categories?.name || '',
+        price: course.price ?? 0,
+        rating: Number(course.average_rating) || 0,
+        students_count: course.course_enrollments?.length || 0,
+        subscription_tier: 'basic',
+        is_free: !course.price,
+        published: course.is_published,
+        created_at: course.created_at,
+        updated_at: course.updated_at,
+      })) || []
+    );
+  },
+
+  // Obtener todas las categorías públicas
+  getCategories: async () => {
+    const { data, error } = await supabase
+      .from('categories')
+      .select('id, name, description')
+      .order('name', { ascending: true });
+
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
   // Gestión de cursos (admin/instructor)
-  manageCourse: (action: string, courseData?: any, courseId?: string) => 
+  manageCourse: (action: string, courseData?: any, courseId?: string) =>
     callEdgeFunction('course-management', { action, courseData, courseId }),
 
   // Gestión de contenido de cursos
-  manageContent: (action: string, courseId: string, courseData?: any, lessonData?: any) => 
+  manageContent: (action: string, courseId: string, courseData?: any, lessonData?: any) =>
     callEdgeFunction('manage-course-content', { action, courseId, courseData, lessonData }),
 
   // Validar contenido del curso
-  validateContent: (courseId: string) => 
+  validateContent: (courseId: string) =>
     callEdgeFunction('validate-course-content', { courseId }),
 
   // Inscribirse en un curso
-  enrollInCourse: (courseId: string) => 
+  enrollInCourse: (courseId: string) =>
     callEdgeFunction('course-enrollment', { courseId }),
 
   // Actualizar progreso de lección
-  updateLessonProgress: (lessonId: string, completed: boolean, timeSpent?: number) => 
+  updateLessonProgress: (lessonId: string, completed: boolean, timeSpent?: number) =>
     callEdgeFunction('lesson-progress', { lessonId, completed, timeSpent }),
 };
 
@@ -97,7 +147,7 @@ export const courseService = {
 // SERVICIOS DE ADMIN
 // ========================
 
-export const adminService = {
+const adminServiceBase = {
   // Gestión de cursos (admin)
   getCourses: async (courseId?: string) => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -114,35 +164,41 @@ export const adminService = {
     return response.json();
   },
 
-  createCourse: (courseData: any) => 
+  createCourse: (courseData: any) =>
     callEdgeFunction('admin-courses', courseData, 'POST'),
 
-  updateCourse: (courseId: string, courseData: any) => 
-    callEdgeFunction('admin-courses', courseData, 'PUT'),
+  updateCourse: (courseId: string, courseData: any) =>
+    callEdgeFunction(`admin-courses?courseId=${courseId}`, courseData, 'PUT'),
 
-  deleteCourse: (courseId: string) => 
-    callEdgeFunction('admin-courses', null, 'DELETE'),
+  deleteCourse: (courseId: string) =>
+    callEdgeFunction(`admin-courses?courseId=${courseId}`, null, 'DELETE'),
 
   // Gestión de categorías
-  getCategories: (categoryId?: string) => 
-    callEdgeFunction('admin-categories', null, 'GET'),
+  getCategories: (categoryId?: string) =>
+    callEdgeFunction(categoryId ? `admin-categories?categoryId=${categoryId}` : 'admin-categories', null, 'GET'),
 
   createCategory: (categoryData: any) => 
     callEdgeFunction('admin-categories', categoryData, 'POST'),
 
-  updateCategory: (categoryId: string, categoryData: any) => 
-    callEdgeFunction('admin-categories', categoryData, 'PUT'),
+  updateCategory: (categoryId: string, categoryData: any) =>
+    callEdgeFunction(`admin-categories?categoryId=${categoryId}`, categoryData, 'PUT'),
 
-  deleteCategory: (categoryId: string) => 
-    callEdgeFunction('admin-categories', null, 'DELETE'),
+  deleteCategory: (categoryId: string) =>
+    callEdgeFunction(`admin-categories?categoryId=${categoryId}`, null, 'DELETE'),
 
   // Gestión de lecciones
-  manageLessons: (action: string, lessonData?: any, lessonId?: string) => 
+  manageLessons: (action: string, lessonData?: any, lessonId?: string) =>
     callEdgeFunction('admin-lessons', { action, lessonData, lessonId }),
 
   // Gestión de almacenamiento
-  manageStorage: (action: string, fileData?: any) => 
+  manageStorage: (action: string, fileData?: any) =>
     callEdgeFunction('admin-storage', { action, fileData }),
+};
+
+export const adminService = {
+  ...adminServiceBase,
+  // Alias para compatibilidad
+  getAllCourses: () => adminServiceBase.getCourses(),
 };
 
 // ========================

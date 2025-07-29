@@ -12,12 +12,12 @@ import {
   useEdgeFunction, useCreateCourse, useUpdateCourse, useDeleteCourse,
   useCreateUser, useUpdateUser, useDeleteUser 
 } from '@/hooks/useEdgeFunctions';
-import { 
+import {
   Users, BookOpen, DollarSign, TrendingUp,
-  Edit, Trash2, Plus, Video, 
-  Save, Play, Clock, Award, CheckCircle
+  Edit, Trash2, Plus, Video,
+  Save, Play, Clock, Award, CheckCircle, LogOut
 } from 'lucide-react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
 type UserRole = 'student' | 'instructor' | 'admin';
@@ -105,7 +105,7 @@ interface AdminStats {
 }
 
 const AdminDashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [users, setUsers] = useState<User[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -688,9 +688,20 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Panel de Administración</h1>
-        <p className="text-gray-600">Gestiona usuarios, cursos y el contenido de la plataforma</p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Panel de Administración</h1>
+          <p className="text-gray-600">Gestiona usuarios, cursos y el contenido de la plataforma</p>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Link to="/admin/subscriptions">
+            <Button variant="outline" size="sm">Suscripciones</Button>
+          </Link>
+          <Button variant="outline" size="sm" onClick={signOut}>
+            <LogOut className="h-4 w-4 mr-2" />
+            Cerrar Sesión
+          </Button>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">

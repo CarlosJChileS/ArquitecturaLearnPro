@@ -39,34 +39,25 @@ const CourseReviews: React.FC<CourseReviewsProps> = ({ courseId, canReview = fal
 
   const loadReviews = async () => {
     try {
-      // Mock reviews for now - would connect to database
-      const mockReviews: Review[] = [
-        {
-          id: '1',
-          rating: 5,
-          review_text: 'Excelente curso, muy completo y bien explicado. Lo recomiendo totalmente.',
-          created_at: '2024-01-15T10:00:00Z',
-          user_name: 'María González',
-          user_avatar_url: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=40&h=40&fit=crop&crop=face'
-        },
-        {
-          id: '2',
-          rating: 4,
-          review_text: 'Muy buen contenido, aunque algunas partes podrían estar más actualizadas.',
-          created_at: '2024-01-10T15:30:00Z',
-          user_name: 'Carlos Ruiz',
-          user_avatar_url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face'
-        },
-        {
-          id: '3',
-          rating: 5,
-          review_text: 'Perfecto para principiantes. Los ejercicios prácticos son muy útiles.',
-          created_at: '2024-01-05T09:15:00Z',
-          user_name: 'Ana López'
-        }
-      ];
-      
-      setReviews(mockReviews);
+      const { data, error } = await supabase
+        .from('course_reviews')
+        .select(`id, rating, review_text, created_at, profiles:user_id(full_name, avatar_url)`) 
+        .eq('course_id', courseId)
+        .eq('is_published', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const formatted = (data || []).map((r: any) => ({
+        id: r.id,
+        rating: r.rating,
+        review_text: r.review_text,
+        created_at: r.created_at,
+        user_name: r.profiles?.full_name || 'Usuario',
+        user_avatar_url: r.profiles?.avatar_url || undefined
+      }));
+
+      setReviews(formatted);
     } catch (error) {
       console.error('Error loading reviews:', error);
     } finally {
@@ -76,34 +67,48 @@ const CourseReviews: React.FC<CourseReviewsProps> = ({ courseId, canReview = fal
 
   const submitReview = async () => {
     if (!user || !newReview.trim()) return;
-    
+
     setIsSubmitting(true);
-    
+
     try {
-      // This would connect to the database
+      const { data, error } = await supabase
+        .from('course_reviews')
+        .insert({
+          user_id: user.id,
+          course_id: courseId,
+          rating,
+          review_text: newReview,
+        })
+        .select(
+          `id, rating, review_text, created_at, profiles:user_id(full_name, avatar_url)`
+        )
+        .single();
+
+      if (error) throw error;
+
       const review: Review = {
-        id: Date.now().toString(),
-        rating,
-        review_text: newReview,
-        created_at: new Date().toISOString(),
-        user_name: user.email?.split('@')[0] || 'Usuario',
-        user_avatar_url: undefined
+        id: data.id,
+        rating: data.rating,
+        review_text: data.review_text,
+        created_at: data.created_at,
+        user_name: data.profiles?.full_name || 'Usuario',
+        user_avatar_url: data.profiles?.avatar_url || undefined,
       };
-      
-      setReviews(prev => [review, ...prev]);
+
+      setReviews((prev) => [review, ...prev]);
       setNewReview('');
       setRating(5);
-      
+
       toast({
-        title: "Reseña enviada",
-        description: "Gracias por tu comentario sobre el curso."
+        title: 'Reseña enviada',
+        description: 'Gracias por tu comentario sobre el curso.',
       });
     } catch (error) {
       console.error('Error submitting review:', error);
       toast({
-        title: "Error",
-        description: "No se pudo enviar la reseña",
-        variant: "destructive"
+        title: 'Error',
+        description: 'No se pudo enviar la reseña',
+        variant: 'destructive',
       });
     } finally {
       setIsSubmitting(false);

@@ -23,25 +23,7 @@ interface Course {
   published: boolean;
 }
 
-const mockCourses = [
-  {
-    id: "1",
-    title: "Curso de ejemplo",
-    instructor_name: "Demo Instructor",
-    description: "Este es un curso de muestra.",
-    image_url: "/placeholder.svg",
-    duration_hours: 1,
-    students_count: 0,
-    rating: 5,
-    level: "beginner",
-    category: "General",
-    subscription_tier: "free",
-    is_free: true,
-    published: true,
-  },
-];
 
-const categories = ["Todos", "Desarrollo Web", "Data Science", "Diseño", "Marketing", "IA", "Finanzas"];
 
 const CourseCatalog = () => {
   const [previewCourse, setPreviewCourse] = useState<Course | null>(null);
@@ -70,8 +52,7 @@ const CourseCatalog = () => {
           .slice(0, 6);
         setCourses(publishedCourses);
       } else {
-        // Fallback to mock data if Edge Functions fail
-        setCourses(mockCourses);
+        setCourses([]);
       }
 
       // Load categories
@@ -82,8 +63,7 @@ const CourseCatalog = () => {
       }
     } catch (error) {
       console.error('Error loading catalog data:', error);
-      // Fallback to mock data
-      setCourses(mockCourses);
+      setCourses([]);
     } finally {
       setLoading(false);
     }

@@ -43,7 +43,7 @@ serve(async (req) => {
     const { data: profile } = await supabaseClient
       .from('profiles')
       .select('role')
-      .eq('id', user.id)
+      .eq('user_id', user.id)
       .single()
 
     if (!profile || !['admin', 'instructor'].includes(profile.role)) {

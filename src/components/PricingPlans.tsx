@@ -8,9 +8,9 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useToast } from "@/hooks/use-toast";
+import { useSubscriptionPlans } from "@/hooks/useSubscriptionPlans";
 import { supabase } from "@/integrations/supabase/client";
-
-const plans = [
+const fallbackPlans = [
   {
     id: "Basic",
     name: "Basic",
@@ -38,7 +38,7 @@ const plans = [
     features: [
       "Acceso a TODOS los cursos",
       "Contenido exclusivo Premium",
-      "Certificados de finalización", 
+      "Certificados de finalización",
       "Soporte prioritario",
       "Acceso móvil y web",
       "Progreso sincronizado",
@@ -53,6 +53,19 @@ const PricingPlans = () => {
   const { user } = useAuth();
   const { subscription, createCheckoutSession, createCustomerPortalSession, loading } = useSubscription();
   const { toast } = useToast();
+  const { plans: dbPlans } = useSubscriptionPlans();
+  const plans = dbPlans.length
+    ? dbPlans.map((p) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description || '',
+        monthlyPrice: p.duration_months === 12 ? p.price / 12 : p.price,
+        annualPrice: p.duration_months === 12 ? p.price : p.price * 12,
+        icon: p.name.toLowerCase().includes('premium') ? Zap : Star,
+        popular: p.name.toLowerCase().includes('premium'),
+        features: p.features,
+      }))
+    : fallbackPlans;
 
   const handleSubscribe = async (planName: string) => {
     if (!user) {

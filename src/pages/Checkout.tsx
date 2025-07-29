@@ -12,6 +12,7 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useSubscriptionPlans } from '@/hooks/useSubscriptionPlans';
 
 const Checkout = () => {
   const [searchParams] = useSearchParams();
@@ -28,17 +29,20 @@ const Checkout = () => {
     zipCode: ''
   });
 
+  const { plans: dbPlans } = useSubscriptionPlans();
+  const monthlyPlan = dbPlans.find(p => p.duration_months === 1);
+  const annualPlan = dbPlans.find(p => p.duration_months === 12);
   const plans = {
     monthly: {
       name: 'Plan Mensual',
-      price: 29,
+      price: monthlyPlan?.price ?? 29,
       period: '/mes',
       features: ['Acceso a todos los cursos', 'Certificados de finalización', 'Soporte prioritario']
     },
     annual: {
       name: 'Plan Anual',
-      price: 290,
-      originalPrice: 348,
+      price: annualPlan?.price ?? 290,
+      originalPrice: annualPlan ? undefined : 348,
       period: '/año',
       savings: '17% de descuento',
       features: ['Acceso a todos los cursos', 'Certificados de finalización', 'Soporte prioritario', 'Contenido exclusivo']
