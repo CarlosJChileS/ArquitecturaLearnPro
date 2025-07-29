@@ -5,9 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { useEdgeFunction } from '@/hooks/useEdgeFunctions';
 import { BookOpen, Clock, Trophy, Users, Play } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/lib/supabase-mvp';
 
 interface CourseProgress {
   course_id: string;
@@ -55,48 +55,85 @@ const StudentDashboard: React.FC = () => {
     certificates: 0
   });
 
-  const { execute: getEnrolledCourses } = useEdgeFunction(
-    'course',
-    'getEnrolledCourses'
-  );
-
-  const { execute: getDashboardStats } = useEdgeFunction(
-    'dashboard',
-    'getStudentStats'
-  );
-
-  const { execute: getCourseProgress } = useEdgeFunction(
-    'course',
-    'getCourseProgress'
-  );
-
   useEffect(() => {
     if (user) {
       loadDashboardData();
     }
   }, [user]);
 
+  // Recargar datos cuando el componente se monta (útil para actualizaciones)
+  useEffect(() => {
+    const handleFocus = () => {
+      if (user) {
+        loadDashboardData();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [user]);
+
   const loadDashboardData = async () => {
     try {
-      // Load enrolled courses
-      const coursesResult = await getEnrolledCourses();
-      if (coursesResult.data) {
-        const coursesWithProgress = await Promise.all(
-          coursesResult.data.map(async (course: EnrolledCourse) => {
-            const progressResult = await getCourseProgress(course.id);
-            return {
-              ...course,
-              progress: progressResult.data
-            };
-          })
-        );
-        setEnrolledCourses(coursesWithProgress);
-      }
+      if (!user) return;
 
-      // Load dashboard stats
-      const statsResult = await getDashboardStats();
-      if (statsResult.data) {
-        setStats(statsResult.data);
+      // Load enrolled courses with direct Supabase query
+      const { data: enrollments, error: enrollmentsError } = await supabase
+        .from('course_enrollments')
+        .select(`
+          *,
+          courses (
+            id,
+            title,
+            description,
+            thumbnail_url,
+            duration_hours,
+            level,
+            price,
+            categories (name),
+            profiles:instructor_id (full_name)
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('enrolled_at', { ascending: false });
+
+      if (enrollmentsError) {
+        console.error('Error loading enrollments:', enrollmentsError);
+      } else if (enrollments) {
+        const coursesWithProgress = enrollments.map(enrollment => ({
+          id: enrollment.courses.id,
+          title: enrollment.courses.title,
+          description: enrollment.courses.description,
+          image_url: enrollment.courses.thumbnail_url,
+          instructor_name: enrollment.courses.profiles?.full_name || 'Instructor',
+          duration_hours: enrollment.courses.duration_hours || 0,
+          level: enrollment.courses.level || 'beginner',
+          category: enrollment.courses.categories?.name || 'General',
+          price: enrollment.courses.price || 0,
+          progress: {
+            course_id: enrollment.course_id,
+            user_id: enrollment.user_id,
+            progress: enrollment.progress_percentage || 0,
+            completed: enrollment.completed_at !== null,
+            last_accessed: enrollment.enrolled_at,
+            lessons_completed: 0,
+            total_lessons: 1
+          }
+        }));
+        
+        setEnrolledCourses(coursesWithProgress);
+        
+        // Calculate stats
+        const totalCourses = enrollments.length;
+        const completedCourses = enrollments.filter(e => e.completed_at).length;
+        const totalHours = enrollments.reduce((sum, e) => sum + (e.courses.duration_hours || 0), 0);
+        
+        setStats({
+          totalCourses,
+          completedCourses,
+          totalHours,
+          certificates: completedCourses
+        });
       }
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -266,7 +303,7 @@ const StudentDashboard: React.FC = () => {
                   <div className="flex gap-2">
                     <Button 
                       className="flex-1"
-                      onClick={() => navigate(`/course/${course.id}`)}
+                      onClick={() => navigate(`/courses/${course.id}`)}
                     >
                       <Play className="h-4 w-4 mr-2" />
                       {course.progress?.progress ? 'Continuar' : 'Comenzar'}

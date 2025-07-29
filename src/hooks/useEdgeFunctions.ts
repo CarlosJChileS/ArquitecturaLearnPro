@@ -143,6 +143,14 @@ export const useEnrollInCourse = (options?: UseEdgeFunctionOptions) => {
   });
 };
 
+export const useGetEnrollment = (options?: UseEdgeFunctionOptions) => {
+  return useEdgeFunction('course', 'getEnrollment', {
+    showSuccessToast: false,
+    showErrorToast: false,
+    ...options
+  });
+};
+
 export const useCreateCourse = (options?: UseEdgeFunctionOptions) => {
   return useEdgeFunction('admin', 'createCourse', {
     showSuccessToast: true,

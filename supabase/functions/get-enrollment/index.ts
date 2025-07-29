@@ -8,7 +8,7 @@ const corsHeaders = {
 
 const logStep = (step: string, details?: any) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
-  console.log(`[COURSE-ENROLLMENT] ${step}${detailsStr}`);
+  console.log(`[GET-ENROLLMENT] ${step}${detailsStr}`);
 };
 
 serve(async (req) => {
@@ -52,82 +52,41 @@ serve(async (req) => {
     if (!course_id) throw new Error("course_id is required");
     logStep("Course ID received", { courseId: course_id });
 
-    // Check if course exists and is published
-    const { data: course, error: courseError } = await supabaseServiceClient
-      .from('courses')
-      .select('id, title, price, is_published')
-      .eq('id', course_id)
-      .eq('is_published', true)
-      .single();
-
-    if (courseError || !course) {
-      throw new Error("Course not found or not published");
-    }
-    logStep("Course found", { courseTitle: course.title, price: course.price });
-
-    // Check if user is already enrolled
-    const { data: existingEnrollment } = await supabaseServiceClient
+    // Get enrollment information
+    const { data: enrollment, error: enrollmentError } = await supabaseServiceClient
       .from('course_enrollments')
-      .select('id')
+      .select('id, enrolled_at, progress_percentage, completed_at')
       .eq('user_id', user.id)
       .eq('course_id', course_id)
       .single();
 
-    if (existingEnrollment) {
-      logStep("User already enrolled");
+    if (enrollmentError && enrollmentError.code !== 'PGRST116') {
+      throw new Error(`Error getting enrollment: ${enrollmentError.message}`);
+    }
+
+    if (!enrollment) {
+      logStep("User not enrolled");
       return new Response(JSON.stringify({ 
         success: true, 
-        message: "Already enrolled in this course" 
+        enrolled: false,
+        enrollment: null 
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       });
     }
 
-    // For paid courses, check if user has active subscription
-    if (course.price && course.price > 0) {
-      const { data: subscription } = await supabaseServiceClient
-        .from('subscribers')
-        .select('subscribed, subscription_end')
-        .eq('user_id', user.id)
-        .eq('subscribed', true)
-        .single();
-
-      if (!subscription || new Date(subscription.subscription_end) < new Date()) {
-        throw new Error("Active subscription required for paid courses");
-      }
-      logStep("Subscription verified");
-    }
-
-    // Create enrollment using service role client to bypass RLS
-    const { data: enrollment, error: enrollmentError } = await supabaseServiceClient
-      .from('course_enrollments')
-      .insert({
-        user_id: user.id,
-        course_id: course_id,
-        enrolled_at: new Date().toISOString(),
-        progress_percentage: 0
-      })
-      .select()
-      .single();
-
-    if (enrollmentError) {
-      logStep("Enrollment error details", { 
-        error: enrollmentError,
-        message: enrollmentError.message,
-        code: enrollmentError.code,
-        details: enrollmentError.details 
-      });
-      
-      throw new Error(`Failed to create enrollment: ${enrollmentError.message}`);
-    }
-
-    logStep("Enrollment created successfully", { enrollmentId: enrollment.id });
+    logStep("Enrollment found", { enrollmentId: enrollment.id });
 
     return new Response(JSON.stringify({ 
       success: true, 
-      enrollment_id: enrollment.id,
-      message: "Successfully enrolled in course" 
+      enrolled: true,
+      enrollment: {
+        id: enrollment.id,
+        enrolled_at: enrollment.enrolled_at,
+        progress_percentage: enrollment.progress_percentage || 0,
+        completed_at: enrollment.completed_at
+      }
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
@@ -135,7 +94,7 @@ serve(async (req) => {
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logStep("ERROR in course-enrollment", { message: errorMessage });
+    logStep("ERROR in get-enrollment", { message: errorMessage });
     
     return new Response(JSON.stringify({ 
       error: errorMessage,

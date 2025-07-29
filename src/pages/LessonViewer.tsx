@@ -156,7 +156,7 @@ const LessonViewer: React.FC = () => {
   };
 
   const navigateToLesson = (targetLessonId: string) => {
-    navigate(`/course/${courseId}/lesson/${targetLessonId}`);
+    navigate(`/courses/${courseId}/lesson/${targetLessonId}`);
   };
 
   const getContentIcon = (type: string) => {
@@ -206,7 +206,7 @@ const LessonViewer: React.FC = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate(`/course/${courseId}`)}
+                onClick={() => navigate(`/courses/${courseId}`)}
               >
                 <ChevronLeft className="h-4 w-4 mr-2" />
                 Volver al curso
@@ -277,7 +277,7 @@ const LessonViewer: React.FC = () => {
                     <p className="text-gray-600">
                       Esta es una lección de tipo quiz. Aquí se mostraría el contenido del examen.
                     </p>
-                    <Button onClick={() => navigate(`/course/${courseId}/exam/${lesson.id}`)}>
+                    <Button onClick={() => navigate(`/courses/${courseId}/exam/${lesson.id}`)}>
                       Comenzar Quiz
                     </Button>
                   </div>

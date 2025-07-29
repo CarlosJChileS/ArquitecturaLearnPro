@@ -7,13 +7,15 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useEdgeFunction } from '@/hooks/useEdgeFunctions';
+import { useEdgeFunction, useGetEnrollment } from '@/hooks/useEdgeFunctions';
 import { 
   Play, Clock, Users, Star, BookOpen, Award, 
   ChevronRight, Share2, Heart, CheckCircle,
   Bookmark
 } from 'lucide-react';
 import CourseReviews from '@/components/CourseReviews';
+import { supabase } from '@/lib/supabase-mvp';
+import { useToast } from '@/hooks/use-toast';
 
 interface Lesson {
   id: string;
@@ -74,6 +76,7 @@ const CourseDetail: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { subscription } = useSubscription();
+  const { toast } = useToast();
   const hasActiveSubscription =
     subscription.subscribed &&
     subscription.subscription_end &&
@@ -163,11 +166,16 @@ const CourseDetail: React.FC = () => {
   const checkEnrollment = async () => {
     try {
       const result = await getEnrollment(courseId!);
-      if (result.data) {
-        setEnrollment(result.data);
+      console.log('Enrollment check result:', result);
+      
+      if (result.data && result.data.enrolled) {
+        setEnrollment(result.data.enrollment);
+      } else {
+        setEnrollment(null);
       }
     } catch (error) {
       console.error('Error checking enrollment:', error);
+      setEnrollment(null);
     }
   };
 
@@ -182,27 +190,51 @@ const CourseDetail: React.FC = () => {
     try {
       setIsEnrolling(true);
 
-      // If it's a free course, enroll directly
-      if (course.subscription_tier === 'free') {
-        const result = await enrollCourse(courseId!);
-        if (result.data) {
-          setEnrollment(result.data);
+      // Inscripción directa en la base de datos sin Edge Functions
+      const { data, error } = await supabase
+        .from('course_enrollments')
+        .insert({
+          user_id: user.id,
+          course_id: courseId!,
+          enrolled_at: new Date().toISOString(),
+          progress_percentage: 0
+        })
+        .select()
+        .single();
+
+      if (error) {
+        if (error.code === '23505') { // Duplicate key error
+          toast({
+            title: "Ya estás inscrito",
+            description: "Ya estás inscrito en este curso",
+            variant: "default",
+          });
+          // Check enrollment status
+          await checkEnrollment();
+        } else {
+          throw error;
         }
       } else {
-        // Check if user has required subscription
-        const userSubscriptionTier = subscription?.subscription_tier || 'free';
-        if (canAccessCourse(course.subscription_tier, userSubscriptionTier)) {
-          const result = await enrollCourse(courseId!);
-          if (result.data) {
-            setEnrollment(result.data);
-          }
-        } else {
-          // Redirect to subscription page
-          navigate('/subscription');
-        }
+        toast({
+          title: "¡Inscripción exitosa!",
+          description: `Te has inscrito exitosamente en "${course.title}"`,
+        });
+        
+        // Update enrollment state
+        setEnrollment({
+          id: data.id,
+          enrolled_at: data.enrolled_at,
+          progress_percentage: 0,
+          completed_at: null
+        });
       }
     } catch (error) {
       console.error('Error enrolling in course:', error);
+      toast({
+        title: "Error",
+        description: "Error al inscribirse en el curso. Inténtalo de nuevo.",
+        variant: "destructive",
+      });
     } finally {
       setIsEnrolling(false);
     }
@@ -241,15 +273,33 @@ const CourseDetail: React.FC = () => {
   };
 
   const startLearning = () => {
-    // Find first incomplete lesson or start from beginning
-    const firstIncompleteLesson = course?.modules
-      .flatMap(module => module.lessons)
-      .find(lesson => !lesson.completed);
-    
-    const lessonId = firstIncompleteLesson?.id || course?.modules[0]?.lessons[0]?.id;
-    
-    if (lessonId) {
-      navigate(`/lesson/${lessonId}`);
+    if (!course || !course.modules || course.modules.length === 0) {
+      // Si no hay módulos, mostrar el curriculum
+      setActiveTab('curriculum');
+      setTimeout(() => {
+        const contentSection = document.getElementById('course-content');
+        if (contentSection) {
+          contentSection.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+      return;
+    }
+
+    // Buscar la primera lección del primer módulo
+    const firstModule = course.modules[0];
+    if (firstModule && firstModule.lessons && firstModule.lessons.length > 0) {
+      const firstLesson = firstModule.lessons[0];
+      // Navegar directamente a la primera lección
+      navigate(`/courses/${course.id}/lesson/${firstLesson.id}`);
+    } else {
+      // Si no hay lecciones, mostrar el curriculum
+      setActiveTab('curriculum');
+      setTimeout(() => {
+        const contentSection = document.getElementById('course-content');
+        if (contentSection) {
+          contentSection.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
     }
   };
 
@@ -456,7 +506,7 @@ const CourseDetail: React.FC = () => {
       </div>
 
       {/* Content Tabs */}
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8" id="course-content">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Resumen</TabsTrigger>

@@ -136,7 +136,11 @@ export const courseService = {
 
   // Inscribirse en un curso
   enrollInCourse: (courseId: string) =>
-    callEdgeFunction('course-enrollment', { courseId }),
+    callEdgeFunction('course-enrollment', { course_id: courseId }),
+
+  // Verificar inscripción en un curso
+  getEnrollment: (courseId: string) =>
+    callEdgeFunction('get-enrollment', { course_id: courseId }),
 
   // Actualizar progreso de lección
   updateLessonProgress: (lessonId: string, completed: boolean, timeSpent?: number) =>

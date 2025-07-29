@@ -9,6 +9,8 @@ import { useEdgeFunction } from '@/hooks/useEdgeFunctions';
 import { Search, Star, Clock, Users, BookOpen, Filter } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCreateCheckout, useEnrollInCourse } from '@/hooks/useEdgeFunctions';
+import { supabase } from '@/lib/supabase-mvp';
+import { useToast } from '@/hooks/use-toast';
 
 interface Course {
   id: string;
@@ -44,9 +46,11 @@ const CoursesPage: React.FC = () => {
     subscription.subscription_end &&
     new Date(subscription.subscription_end) > new Date();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [courses, setCourses] = useState<Course[]>([]);
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
+  const [userEnrollments, setUserEnrollments] = useState<Set<string>>(new Set());
   const [filters, setFilters] = useState<CourseFilters>({
     category: '',
     level: '',
@@ -82,7 +86,10 @@ const CoursesPage: React.FC = () => {
   useEffect(() => {
     loadCourses();
     loadCategories();
-  }, []);
+    if (user) {
+      loadUserEnrollments();
+    }
+  }, [user]);
 
   useEffect(() => {
     filterCourses();
@@ -99,6 +106,26 @@ const CoursesPage: React.FC = () => {
     const result = await getCategories();
     if (result.data) {
       setCategories(result.data.map((cat: any) => cat.name));
+    }
+  };
+
+  const loadUserEnrollments = async () => {
+    if (!user) return;
+    
+    try {
+      const { data: enrollments, error } = await supabase
+        .from('course_enrollments')
+        .select('course_id')
+        .eq('user_id', user.id);
+      
+      if (error) {
+        console.error('Error loading user enrollments:', error);
+      } else if (enrollments) {
+        const enrollmentIds = new Set(enrollments.map(e => e.course_id));
+        setUserEnrollments(enrollmentIds);
+      }
+    } catch (error) {
+      console.error('Error loading user enrollments:', error);
     }
   };
 
@@ -147,10 +174,48 @@ const CoursesPage: React.FC = () => {
       return;
     }
 
-    if (course.is_free || hasActiveSubscription) {
-      await enrollInCourse(course.id);
-    } else {
-      await createCheckout('single', { courseId: course.id });
+    try {
+      // Inscripción directa en la base de datos sin Edge Functions
+      const { data, error } = await supabase
+        .from('course_enrollments')
+        .insert({
+          user_id: user.id,
+          course_id: course.id,
+          enrolled_at: new Date().toISOString(),
+          progress_percentage: 0
+        })
+        .select()
+        .single();
+
+      if (error) {
+        if (error.code === '23505') { // Duplicate key error
+          toast({
+            title: "Ya estás inscrito",
+            description: "Ya estás inscrito en este curso",
+            variant: "default",
+          });
+        } else {
+          throw error;
+        }
+      } else {
+        toast({
+          title: "¡Inscripción exitosa!",
+          description: `Te has inscrito exitosamente en "${course.title}"`,
+        });
+        
+        // Actualizar el estado de inscripciones
+        setUserEnrollments(prev => new Set([...prev, course.id]));
+        
+        // Navegar al curso después de la inscripción
+        navigate(`/courses/${course.id}`);
+      }
+    } catch (error) {
+      console.error('Error enrolling in course:', error);
+      toast({
+        title: "Error",
+        description: "Error al inscribirse en el curso. Inténtalo de nuevo.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -282,7 +347,7 @@ const CoursesPage: React.FC = () => {
                 src={course.image_url || '/placeholder.svg'}
                 alt={course.title}
                 className="w-full h-48 object-cover rounded-t-lg"
-                onClick={() => navigate(`/course/${course.id}`)}
+                onClick={() => navigate(`/courses/${course.id}`)}
               />
               <Badge 
                 variant="secondary" 
@@ -303,7 +368,7 @@ const CoursesPage: React.FC = () => {
             <CardHeader>
               <CardTitle 
                 className="line-clamp-2 cursor-pointer hover:text-blue-600"
-                onClick={() => navigate(`/course/${course.id}`)}
+                onClick={() => navigate(`/courses/${course.id}`)}
               >
                 {course.title}
               </CardTitle>
@@ -344,12 +409,21 @@ const CoursesPage: React.FC = () => {
                 </div>
                 
                 <Button
-                  onClick={() => handleEnrollClick(course)}
+                  onClick={() => {
+                    if (userEnrollments.has(course.id)) {
+                      navigate(`/courses/${course.id}`);
+                    } else {
+                      handleEnrollClick(course);
+                    }
+                  }}
                   disabled={checkoutLoading || enrollLoading}
                   className="min-w-[100px]"
+                  variant={userEnrollments.has(course.id) ? "default" : "default"}
                 >
                   {checkoutLoading || enrollLoading ? (
                     'Procesando...'
+                  ) : userEnrollments.has(course.id) ? (
+                    'Ver Curso'
                   ) : course.is_free || hasActiveSubscription ? (
                     'Inscribirse'
                   ) : (

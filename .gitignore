@@ -38,5 +38,9 @@ dist-ssr
 *.key
 *.pem
 
+# Archivos específicos de Supabase con credenciales
+supabase/.env.functions
+supabase/.env.local
+
 # Logs con posibles credenciales
 *.log

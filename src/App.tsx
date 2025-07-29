@@ -27,6 +27,7 @@ import AdminSubscriptions from "./pages/AdminSubscriptions";
 import ExamPage from "./pages/ExamPage";
 import ExamResults from "./pages/ExamResults";
 import CertificateView from "./pages/CertificateView";
+import LessonViewer from "./pages/LessonViewer";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,6 +46,8 @@ const App = () => {
               <Route path="/" element={<Index />} />
               <Route path="/courses" element={<Courses />} />
               <Route path="/courses/:id" element={<CourseDetail />} />
+              <Route path="/courses/:courseId/lesson/:lessonId" element={<LessonViewer />} />
+              <Route path="/courses/:courseId/exam/:lessonId" element={<ExamPage />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/contact" element={<Contact />} />
