@@ -5,10 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { useEdgeFunction } from '@/hooks/useEdgeFunctions';
+import { supabase } from '@/integrations/supabase/client';
 import { 
-  ChevronLeft, ChevronRight, Play, Pause, Volume2, 
-  Settings, Maximize, CheckCircle, Clock, FileText,
+  ChevronLeft, ChevronRight, CheckCircle, Clock, FileText,
   Video, Award, BookOpen
 } from 'lucide-react';
 
@@ -19,7 +18,7 @@ interface Lesson {
   content: string;
   video_url?: string;
   duration_minutes: number;
-  lesson_order: number;
+  order_index: number;
   content_type: 'video' | 'text' | 'quiz';
   course_id: string;
 }
@@ -44,22 +43,38 @@ const LessonViewer: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   
+  console.log('🎯 LessonViewer rendering...');
+  console.log('📍 URL params:', { courseId, lessonId });
+  console.log('🔐 User:', user?.id);
+  console.log('🌐 Current location:', window.location.href);
+  
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [course, setCourse] = useState<Course | null>(null);
   const [allLessons, setAllLessons] = useState<Lesson[]>([]);
   const [progress, setProgress] = useState<LessonProgress | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [courseProgress, setCourseProgress] = useState({ completed: 0, total: 0 });
+  const [lessonsProgress, setLessonsProgress] = useState<Map<string, boolean>>(new Map());
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [loading, setLoading] = useState(true);
 
-  const { execute: getLessonById } = useEdgeFunction('course', 'getLessonById');
-  const { execute: getCourseById } = useEdgeFunction('course', 'getCourseById');
-  const { execute: getCourseLessons } = useEdgeFunction('course', 'getCourseLessons');
-  const { execute: updateLessonProgress } = useEdgeFunction('course', 'updateLessonProgress');
-  const { execute: getLessonProgress } = useEdgeFunction('course', 'getLessonProgress');
-
+  // Edge functions no las necesitamos ahora - usando Supabase directo
+    
   useEffect(() => {
+    console.log('🔍 LessonViewer mounted/updated with:', {
+      courseId,
+      lessonId,
+      hasUser: !!user,
+      userId: user?.id,
+      userEmail: user?.email,
+      userObject: user // Full user object for debugging
+    });
+
+    if (!user) {
+      console.warn('⚠️ No user found in LessonViewer - progress updates will fail');
+      console.warn('⚠️ User should have auth.users ID, not profiles.id');
+    } else {
+      console.log('✅ User found with auth.users ID:', user.id);
+    }
+
     if (courseId && lessonId) {
       loadLessonData();
     }
@@ -69,79 +84,322 @@ const LessonViewer: React.FC = () => {
     if (!courseId || !lessonId) return;
 
     try {
-      setLoading(true);
+      // Get course data
+      const { data: courseData, error: courseError } = await supabase
+        .from('courses')
+        .select('id, title, instructor_id, profiles:instructor_id(full_name)')
+        .eq('id', courseId)
+        .single();
 
-      // Mock data for development
-      const mockCourse: Course = {
-        id: courseId,
-        title: "Curso Demo",
-        instructor_name: "Demo Instructor",
-      };
+      if (courseError) {
+        console.error('Error loading course:', courseError);
+      } else if (courseData) {
+        setCourse({
+          id: courseData.id,
+          title: courseData.title,
+          instructor_name: courseData.profiles?.full_name || 'Instructor'
+        });
+      }
 
-      const mockLessons: Lesson[] = [
-        {
-          id: "lesson-1",
-          title: "Lección de ejemplo",
-          description: "Contenido de demostración",
-          content: "<p>Contenido HTML de ejemplo</p>",
-          video_url: "https://www.youtube.com/embed/dQw4w9WgXcQ",
-          duration_minutes: 5,
-          lesson_order: 1,
-          content_type: "video",
-          course_id: courseId,
-        },
-      ];
+      // Verificar si la tabla lessons existe
+      const { data: lessonsData, error: lessonsError } = await supabase
+        .from('lessons')
+        .select('id, title, description, content, video_url, duration_minutes, order_index, content_type')
+        .eq('course_id', courseId)
+        .order('order_index', { ascending: true });
 
-      const currentLesson = mockLessons.find(l => l.id === lessonId);
-      
-      setCourse(mockCourse);
-      setAllLessons(mockLessons);
-      setLesson(currentLesson || null);
+      if (lessonsError) {
+        console.error('Error loading lessons:', lessonsError);
+        // Si la tabla no existe, mostrar mensaje apropiado
+        if (lessonsError.message.includes('does not exist')) {
+          console.log('Lessons table does not exist yet');
+          setLesson({
+            id: 'no-lessons-table',
+            title: 'Base de datos en configuración',
+            description: 'Las lecciones están siendo configuradas.',
+            content: '<div class="text-center p-8"><h2>Base de datos en configuración</h2><p>Las lecciones están siendo configuradas. Por favor ejecuta el script SQL de creación de lecciones.</p><p><strong>Instrucciones:</strong></p><ol style="text-align: left; max-width: 400px; margin: 0 auto;"><li>Ve a Supabase SQL Editor</li><li>Ejecuta el script create-lessons.sql</li><li>Recarga esta página</li></ol></div>',
+            duration_minutes: 0,
+            order_index: 1,
+            content_type: 'text',
+            course_id: courseId
+          });
+          return;
+        }
+      } else if (lessonsData && lessonsData.length > 0) {
+        const formattedLessons: Lesson[] = lessonsData.map((lesson: any) => ({
+          id: lesson.id,
+          title: lesson.title,
+          description: lesson.description || '',
+          content: lesson.content || `<h2>${lesson.title}</h2><p>${lesson.description || 'Contenido de la lección'}</p>`,
+          video_url: lesson.video_url || undefined,
+          duration_minutes: lesson.duration_minutes || 0,
+          order_index: lesson.order_index || 0,
+          content_type: lesson.content_type as 'video' | 'text' | 'quiz',
+          course_id: courseId
+        }));
+        
+        setAllLessons(formattedLessons);
+        
+        // Find current lesson
+        const currentLesson = formattedLessons.find(l => l.id === lessonId);
+        setLesson(currentLesson || null);
+        
+        if (!currentLesson) {
+          console.error('Lesson not found:', lessonId);
+          // Navigate to first lesson if current one doesn't exist
+          if (formattedLessons.length > 0) {
+            navigate(`/courses/${courseId}/lesson/${formattedLessons[0].id}`, { replace: true });
+          }
+        }
+      } else {
+        // No lessons found, create a default message
+        console.log('No lessons found for course:', courseId);
+        setLesson({
+          id: 'no-lessons',
+          title: 'Curso en construcción',
+          description: 'Este curso aún no tiene lecciones disponibles.',
+          content: '<p>Las lecciones están siendo preparadas. Vuelve pronto para acceder al contenido.</p>',
+          duration_minutes: 0,
+          order_index: 1,
+          content_type: 'text',
+          course_id: courseId
+        });
+      }
 
       // Load progress if user is logged in
-      if (user && currentLesson) {
-        const mockProgress: LessonProgress = {
-          lesson_id: lessonId,
-          user_id: user.id,
-          completed: false,
-          progress_percentage: Math.random() * 100,
-          time_spent_minutes: Math.floor(Math.random() * 30),
-          last_position: Math.random() * 100
-        };
-        setProgress(mockProgress);
+      if (user && lessonId !== 'no-lessons' && lessonId !== 'no-lessons-table') {
+        const { data: progressData, error: progressError } = await supabase
+          .from('lesson_progress')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('lesson_id', lessonId)
+          .single();
+
+        if (!progressError && progressData) {
+          setProgress({
+            lesson_id: progressData.lesson_id,
+            user_id: progressData.user_id,
+            completed: progressData.is_completed || false,
+            progress_percentage: 100, // Simplificado por ahora
+            time_spent_minutes: Math.floor((progressData.watch_time_seconds || 0) / 60),
+            last_position: 0 // No existe en la tabla actual
+          });
+        }
       }
 
     } catch (error) {
       console.error('Error loading lesson data:', error);
-    } finally {
-      setLoading(false);
+      // Fallback to a basic lesson
+      setLesson({
+        id: 'error-lesson',
+        title: 'Error cargando contenido',
+        description: 'Hubo un problema cargando la lección.',
+        content: '<p>Por favor, intenta recargar la página o contacta al soporte.</p>',
+        duration_minutes: 0,
+        order_index: 1,
+        content_type: 'text',
+        course_id: courseId || ''
+      });
     }
   };
 
+  const loadCourseProgress = async () => {
+    if (!user || !courseId || allLessons.length === 0) {
+      console.log('⚠️ loadCourseProgress skipped - missing data:', {
+        hasUser: !!user,
+        hasCourseId: !!courseId,
+        lessonsCount: allLessons.length
+      });
+      return;
+    }
+    
+    console.log('🔄 Loading course progress for:', {
+      userId: user.id,
+      courseId,
+      lessonsCount: allLessons.length,
+      lessonIds: allLessons.map(l => l.id)
+    });
+    
+    try {
+      // Get progress for all lessons in the course
+      const { data: progressData, error } = await supabase
+        .from('lesson_progress')
+        .select('lesson_id, is_completed')
+        .eq('user_id', user.id)
+        .in('lesson_id', allLessons.map(l => l.id));
+
+      console.log('📊 Raw course progress data from DB:', progressData);
+      console.log('📊 Query error (if any):', error);
+
+      if (!error && progressData) {
+        // Create a map of lesson progress for easy lookup
+        const progressMap = new Map<string, boolean>();
+        
+        // Log each lesson's completion status
+        allLessons.forEach(lesson => {
+          const progressRecord = progressData.find(p => p.lesson_id === lesson.id);
+          const isCompleted = progressRecord?.is_completed || false;
+          progressMap.set(lesson.id, isCompleted);
+          console.log(`   📖 ${lesson.title}: ${isCompleted ? 'COMPLETED' : 'NOT COMPLETED'}`);
+        });
+
+        // Update lessons progress map
+        setLessonsProgress(progressMap);
+
+        const completedCount = progressData.filter(p => p.is_completed).length;
+        const newProgress = {
+          completed: completedCount,
+          total: allLessons.length
+        };
+        
+        console.log('📈 Calculated course progress:', newProgress);
+        console.log('📈 Previous course progress:', courseProgress);
+        
+        setCourseProgress(newProgress);
+        
+        console.log('✅ Course progress state updated');
+      } else if (error) {
+        console.error('❌ Error loading course progress:', error);
+      } else {
+        console.log('📊 No progress data found - setting to 0/total');
+        setLessonsProgress(new Map());
+        setCourseProgress({
+          completed: 0,
+          total: allLessons.length
+        });
+      }
+    } catch (error) {
+      console.error('❌ Error in loadCourseProgress:', error);
+    }
+  };
+
+  const isCoursCompleted = () => {
+    return courseProgress.completed === courseProgress.total && courseProgress.total > 0;
+  };
+
+  const shouldShowFinalExam = () => {
+    return isCoursCompleted() && course && allLessons.length > 0;
+  };
+
+  // Load course progress when lessons are loaded
+  useEffect(() => {
+    if (allLessons.length > 0 && user) {
+      loadCourseProgress();
+    }
+  }, [allLessons, user]);
+
+  // Reload progress when the lesson changes
+  useEffect(() => {
+    if (progress && lesson) {
+      console.log('🔄 Progress state updated:', {
+        lessonId: lesson.id,
+        completed: progress.completed,
+        percentage: progress.progress_percentage
+      });
+    }
+  }, [progress, lesson]);
+
+  // Verificar que tenemos los parámetros requeridos
+  if (!courseId || !lessonId) {
+    console.error('❌ Missing required parameters');
+    console.error('   courseId:', courseId);
+    console.error('   lessonId:', lessonId);
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-6 text-center">
+            <h2 className="text-xl font-semibold mb-2">Error</h2>
+            <p className="text-gray-600 mb-4">
+              Los parámetros de curso y lección son requeridos.
+              <br />
+              <small>courseId: {courseId || 'missing'}</small>
+              <br />
+              <small>lessonId: {lessonId || 'missing'}</small>
+            </p>
+            <Button onClick={() => navigate('/courses')}>
+              Volver a Cursos
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const handleProgressUpdate = async (progressPercentage: number, completed: boolean = false) => {
-    if (!user || !lesson) return;
+    if (!user || !lesson || !courseId) {
+      console.error('❌ Missing required data for progress update:', {
+        hasUser: !!user,
+        hasLesson: !!lesson,
+        hasCourseId: !!courseId
+      });
+      alert('Error: Faltan datos necesarios para actualizar el progreso');
+      return;
+    }
+
+    console.log('🔄 Updating lesson progress:', {
+      lessonId: lesson.id,
+      courseId,
+      progressPercentage,
+      completed,
+      timeSpent: Math.floor(currentTime / 60),
+      currentProgress: progress,
+      userId: user.id
+    });
 
     try {
-      await updateLessonProgress({
-        lessonId: lesson.id,
-        progressPercentage,
-        completed,
-        timeSpent: Math.floor(currentTime / 60)
+      // Use direct database update
+      console.log('💾 Using direct database update...');
+      const progressData = {
+        user_id: user.id,
+        lesson_id: lesson.id,
+        course_id: courseId,
+        is_completed: completed,
+        watch_time_seconds: Math.floor(currentTime)
+      };
+
+      console.log('💾 Data to upsert:', progressData);
+
+      const { data, error: upsertError } = await supabase
+        .from('lesson_progress')
+        .upsert(progressData)
+        .select()
+        .single();
+
+      if (upsertError) {
+        console.error('❌ Database update failed:', upsertError);
+        alert(`❌ Error en base de datos: ${upsertError.message}`);
+        return;
+      }
+
+      console.log('✅ Database update succeeded:', data);
+      
+      // Update local state only after successful database update
+      setProgress({
+        lesson_id: lesson.id,
+        user_id: user.id,
+        completed: completed,
+        progress_percentage: progressPercentage,
+        time_spent_minutes: Math.floor(currentTime / 60),
+        last_position: currentTime
       });
 
-      setProgress(prev => prev ? {
-        ...prev,
-        progress_percentage: progressPercentage,
-        completed,
-        time_spent_minutes: Math.floor(currentTime / 60)
-      } : null);
+      // Update course progress when a lesson is marked as completed
+      if (completed) {
+        console.log('🔄 Updating course progress...');
+        setTimeout(() => loadCourseProgress(), 500); // Small delay to ensure DB is updated
+      }
 
-    } catch (error) {
-      console.error('Error updating progress:', error);
+      alert('✅ Progreso actualizado correctamente');
+
+    } catch (error: any) {
+      console.error('❌ Update failed:', error);
+      alert(`❌ Error crítico: ${error.message}`);
     }
   };
 
   const markAsCompleted = () => {
+    console.log('🎯 Marking lesson as completed...');
+    console.log('Current progress state:', progress);
     handleProgressUpdate(100, true);
   };
 
@@ -172,7 +430,7 @@ const LessonViewer: React.FC = () => {
     }
   };
 
-  if (loading || !lesson || !course) {
+  if (!lesson || !course) {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="container mx-auto px-4 py-8">
@@ -339,13 +597,35 @@ const LessonViewer: React.FC = () => {
                 <div className="space-y-2 mb-4">
                   <div className="flex justify-between text-sm">
                     <span>Completado</span>
-                    <span>2 de {allLessons.length}</span>
+                    <span>{courseProgress.completed} de {courseProgress.total}</span>
                   </div>
-                  <Progress value={(2 / allLessons.length) * 100} className="h-2" />
+                  <Progress 
+                    value={courseProgress.total > 0 ? (courseProgress.completed / courseProgress.total) * 100 : 0} 
+                    className="h-2" 
+                  />
                 </div>
-                <p className="text-xs text-gray-600">
-                  Continúa completando lecciones para obtener tu certificado
-                </p>
+                
+                {isCoursCompleted() ? (
+                  <div className="space-y-2">
+                    <p className="text-sm text-green-600 font-medium">
+                      ¡Felicitaciones! Has completado todas las lecciones.
+                    </p>
+                    <Button 
+                      className="w-full" 
+                      onClick={() => {
+                        console.log('🎯 Navigating to final exam...');
+                        navigate(`/courses/${courseId}/exam/final`);
+                      }}
+                    >
+                      <Award className="h-4 w-4 mr-2" />
+                      Tomar Examen Final
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-600">
+                    Continúa completando lecciones para obtener tu certificado
+                  </p>
+                )}
               </CardContent>
             </Card>
 
@@ -356,32 +636,44 @@ const LessonViewer: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {allLessons.map((lessonItem, index) => (
-                    <div
-                      key={lessonItem.id}
-                      className={`flex items-center p-3 rounded-lg cursor-pointer transition-colors ${
-                        lessonItem.id === lesson.id 
-                          ? 'bg-primary/10 border border-primary/20' 
-                          : 'hover:bg-gray-50'
-                      }`}
-                      onClick={() => navigateToLesson(lessonItem.id)}
-                    >
-                      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-medium mr-3">
-                        {getContentIcon(lessonItem.content_type)}
+                  {allLessons.map((lessonItem, index) => {
+                    const isCompleted = lessonsProgress.get(lessonItem.id) || false;
+                    return (
+                      <div
+                        key={lessonItem.id}
+                        className={`flex items-center p-3 rounded-lg cursor-pointer transition-colors ${
+                          lessonItem.id === lesson.id 
+                            ? 'bg-primary/10 border border-primary/20' 
+                            : 'hover:bg-gray-50'
+                        }`}
+                        onClick={() => navigateToLesson(lessonItem.id)}
+                      >
+                        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-medium mr-3">
+                          {isCompleted ? (
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                          ) : (
+                            getContentIcon(lessonItem.content_type)
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className={`text-sm font-medium truncate ${isCompleted ? 'text-green-600' : ''}`}>
+                            {index + 1}. {lessonItem.title}
+                          </h4>
+                          <p className="text-xs text-gray-500">
+                            {lessonItem.duration_minutes} min
+                          </p>
+                        </div>
+                        {isCompleted && (
+                          <div className="text-xs text-green-600 font-medium mr-2">
+                            ✓ Completada
+                          </div>
+                        )}
+                        {lessonItem.id === lesson.id && (
+                          <div className="w-2 h-2 bg-primary rounded-full"></div>
+                        )}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-sm font-medium truncate">
-                          {index + 1}. {lessonItem.title}
-                        </h4>
-                        <p className="text-xs text-gray-500">
-                          {lessonItem.duration_minutes} min
-                        </p>
-                      </div>
-                      {lessonItem.id === lesson.id && (
-                        <div className="w-2 h-2 bg-primary rounded-full"></div>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>

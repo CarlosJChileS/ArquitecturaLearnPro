@@ -13,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useSubscriptionPlans } from '@/hooks/useSubscriptionPlans';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 
 const Checkout = () => {
   const [searchParams] = useSearchParams();
@@ -51,6 +52,7 @@ const Checkout = () => {
 
   const { user } = useAuth();
   const { toast } = useToast();
+  const { createCheckoutSession } = useSubscription();
   const [loading, setLoading] = useState(false);
 
   const selectedPlan = plans[planType as keyof typeof plans];
@@ -97,6 +99,40 @@ const Checkout = () => {
       toast({
         title: 'Error',
         description: 'Error al procesar el pago con PayPal.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStripe = async () => {
+    if (!user) {
+      toast({
+        title: 'Inicia sesión requerido',
+        description: 'Debes iniciar sesión para suscribirte a un plan.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const planTypeParam = planType === 'monthly' ? 'monthly' : 'annual';
+      const result = await createCheckoutSession(planTypeParam, 'Premium', 'hosted');
+      
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      
+      // Redirigir a la URL de checkout de Stripe en nueva pestaña
+      if (result.url) {
+        window.open(result.url, '_blank');
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Error al procesar el pago con Stripe.',
         variant: 'destructive',
       });
     } finally {
@@ -281,10 +317,10 @@ const Checkout = () => {
                       )}
                     </div>
                     <div className="text-right">
-                      <div className="font-bold text-lg">€{selectedPlan.price}{selectedPlan.period}</div>
+                      <div className="font-bold text-lg">${selectedPlan.price}{selectedPlan.period}</div>
                       {'originalPrice' in selectedPlan && selectedPlan.originalPrice && (
                         <div className="text-sm text-muted-foreground line-through">
-                          €{selectedPlan.originalPrice}/año
+                          ${selectedPlan.originalPrice}/año
                         </div>
                       )}
                     </div>
@@ -306,7 +342,7 @@ const Checkout = () => {
 
                   <div className="flex items-center justify-between font-bold text-lg">
                     <span>Total</span>
-                    <span>€{selectedPlan.price}{selectedPlan.period}</span>
+                    <span>${selectedPlan.price}{selectedPlan.period}</span>
                   </div>
 
                   <Button
@@ -327,8 +363,12 @@ const Checkout = () => {
                     >
                       {loading ? 'Procesando...' : 'Pagar con PayPal'}
                     </Button>
-                    <Button className="w-full bg-purple-600 hover:bg-purple-700">
-                      Pagar con Stripe
+                    <Button 
+                      className="w-full bg-purple-600 hover:bg-purple-700"
+                      onClick={handleStripe}
+                      disabled={loading}
+                    >
+                      {loading ? 'Procesando...' : 'Pagar con Stripe'}
                     </Button>
                   </div>
 

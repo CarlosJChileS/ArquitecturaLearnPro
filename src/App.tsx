@@ -19,15 +19,17 @@ import Contact from "./pages/Contact";
 import About from "./pages/About";
 import FAQPage from "./pages/FAQ";
 import AdminLogin from "./pages/AdminLogin";
-import AdminDashboard from "./pages/AdminDashboard";
-import AdminCourseEditor from "./pages/AdminCourseEditor";
+import AdminCourseManager from "./pages/AdminCourseManager";
+import AdminCourseEditor from "./pages/AdminCourseEditorNew";
 import AdminUsers from "./pages/AdminUsers";
 import AdminPlans from "./pages/AdminPlans";
 import AdminSubscriptions from "./pages/AdminSubscriptions";
 import ExamPage from "./pages/ExamPage";
 import ExamResults from "./pages/ExamResults";
 import CertificateView from "./pages/CertificateView";
-import LessonViewer from "./pages/LessonViewer";
+// import LessonViewer from "./pages/LessonViewer";
+import DatabaseValidator from "./pages/DatabaseValidator";
+import CheckoutDemo from "./pages/CheckoutDemo";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,8 +47,8 @@ const App = () => {
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/courses" element={<Courses />} />
-              <Route path="/courses/:id" element={<CourseDetail />} />
-              <Route path="/courses/:courseId/lesson/:lessonId" element={<LessonViewer />} />
+              <Route path="/courses/:courseId" element={<CourseDetail />} />
+              {/* <Route path="/courses/:courseId/lesson/:lessonId" element={<LessonViewer />} /> */}
               <Route path="/courses/:courseId/exam/:lessonId" element={<ExamPage />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
@@ -66,15 +68,21 @@ const App = () => {
                 path="/checkout" 
                 element={<Checkout />} 
               />
+              <Route 
+                path="/checkout-demo" 
+                element={<CheckoutDemo />} 
+              />
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/admin-login" element={<AdminLogin />} />
-              <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="/admin-dashboard" element={<AdminDashboard />} />
-              <Route path="/admin/dashboard" element={<AdminDashboard />} />
-              <Route path="/admin/courses/:id" element={<AdminCourseEditor />} />
+              <Route path="/admin" element={<AdminCourseManager />} />
+              <Route path="/admin-dashboard" element={<AdminCourseManager />} />
+              <Route path="/admin/dashboard" element={<AdminCourseManager />} />
+              <Route path="/admin/courses" element={<AdminCourseManager />} />
+              <Route path="/admin/courses/:courseId" element={<AdminCourseEditor />} />
               <Route path="/admin/users" element={<AdminUsers />} />
               <Route path="/admin/plans" element={<AdminPlans />} />
               <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
+              <Route path="/admin/database" element={<DatabaseValidator />} />
               <Route
                 path="/exam/:examId"
                 element={<ExamPage />}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEdgeFunction } from "@/hooks/useEdgeFunctions";
+import { useLearningProgressBasic } from "@/hooks/useLearningProgressBasic";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ import Footer from "@/components/Footer";
 
 export default function Profile() {
   const { profile, updateProfile } = useAuth();
+  const learningProgress = useLearningProgressBasic();
   const [isEditing, setIsEditing] = useState(false);
   const [formProfile, setFormProfile] = useState({
     name: "",
@@ -184,30 +186,68 @@ export default function Profile() {
                 <Card>
                   <CardHeader>
                     <CardTitle>Progreso de Aprendizaje</CardTitle>
-                    <CardDescription>Tu camino de aprendizaje en LearnPro</CardDescription>
+                    <CardDescription>
+                      Tu camino de aprendizaje en LearnPro
+                      {learningProgress.error && (
+                        <span className="text-orange-600 text-sm block mt-1">
+                          {learningProgress.error}
+                        </span>
+                      )}
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium">JavaScript Development</span>
-                        <span className="text-sm text-muted-foreground">85%</span>
+                    {learningProgress.loading ? (
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <div className="h-4 bg-gray-200 rounded w-32 animate-pulse"></div>
+                          <div className="h-4 bg-gray-200 rounded w-12 animate-pulse"></div>
+                        </div>
+                        <div className="h-2 bg-gray-200 rounded animate-pulse"></div>
                       </div>
-                      <Progress value={85} className="h-2" />
-                    </div>
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium">React & Frontend</span>
-                        <span className="text-sm text-muted-foreground">70%</span>
-                      </div>
-                      <Progress value={70} className="h-2" />
-                    </div>
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium">Backend Development</span>
-                        <span className="text-sm text-muted-foreground">45%</span>
-                      </div>
-                      <Progress value={45} className="h-2" />
-                    </div>
+                    ) : (
+                      <>
+                        {learningProgress.categoryProgress.map((category, index) => (
+                          <div key={index} className="space-y-4">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm font-medium">{category.category}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-muted-foreground">
+                                  {category.total_courses} curso{category.total_courses !== 1 ? 's' : ''}
+                                </span>
+                                <span className="text-sm text-muted-foreground">
+                                  {category.average_progress}%
+                                </span>
+                              </div>
+                            </div>
+                            <Progress value={category.average_progress} className="h-2" />
+                          </div>
+                        ))}
+                        
+                        {/* Estadísticas generales */}
+                        <div className="pt-4 border-t">
+                          <div className="grid grid-cols-3 gap-4 text-center">
+                            <div>
+                              <div className="text-2xl font-bold text-blue-600">
+                                {learningProgress.overallStats.totalEnrolledCourses}
+                              </div>
+                              <div className="text-xs text-muted-foreground">Cursos Inscritos</div>
+                            </div>
+                            <div>
+                              <div className="text-2xl font-bold text-green-600">
+                                {learningProgress.overallStats.totalCompletedCourses}
+                              </div>
+                              <div className="text-xs text-muted-foreground">Completados</div>
+                            </div>
+                            <div>
+                              <div className="text-2xl font-bold text-purple-600">
+                                {learningProgress.overallStats.averageProgress}%
+                              </div>
+                              <div className="text-xs text-muted-foreground">Progreso Promedio</div>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
 

@@ -8,13 +8,16 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { 
   useEdgeFunction, useCreateCourse, useUpdateCourse, useDeleteCourse,
   useCreateUser, useUpdateUser, useDeleteUser 
 } from '@/hooks/useEdgeFunctions';
+import { prepareCourseDataForDB, handleUUIDError } from '@/lib/uuid-utils';
+import { CategorySelector } from '@/components/ui/CategorySelector';
 import {
   Users, BookOpen, DollarSign, TrendingUp,
-  Edit, Trash2, Plus, Video,
+  Edit, Trash2, Plus, Video, Bell, RefreshCw, Send,
   Save, Play, Clock, Award, CheckCircle, LogOut
 } from 'lucide-react';
 import { Navigate, Link } from 'react-router-dom';
@@ -39,19 +42,20 @@ interface User {
 interface Course {
   id: string;
   title: string;
-  description: string;
-  instructor_name: string;
-  category: string;
-  level: string;
-  subscription_tier: string; // 'basic' | 'premium' | 'free'
-  students_count: number;
-  published: boolean;
-  created_at: string;
+  description?: string;
   thumbnail_url?: string;
-  intro_video_url?: string;
+  price?: number;
+  instructor_id?: string;
+  category_id?: string;
+  level: string; // 'beginner' | 'intermediate' | 'advanced'
   duration_hours?: number;
-  has_final_exam?: boolean;
-  text_sections?: string[];
+  is_published: boolean;
+  created_at: string;
+  updated_at?: string;
+  // Campos computados o de joins
+  instructor_name?: string;
+  category?: string;
+  students_count?: number;
   lessons_count?: number;
 }
 
@@ -104,13 +108,63 @@ interface AdminStats {
   freeUsers: number;
 }
 
+interface Notification {
+  id: string;
+  user_id: string;
+  title: string;
+  message: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  is_read: boolean;
+  action_url?: string;
+  created_at: string;
+  profiles?: {
+    full_name: string;
+    email: string;
+  };
+}
+
+interface SubscriptionPlan {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  duration_months: number;
+  features: string[];
+  is_active: boolean;
+  stripe_price_id?: string;
+  created_at: string;
+}
+
+interface Subscription {
+  id: string;
+  user_id: string;
+  plan_id: string;
+  status: 'active' | 'cancelled' | 'expired' | 'pending';
+  start_date: string;
+  end_date: string;
+  stripe_subscription_id?: string;
+  stripe_customer_id?: string;
+  created_at: string;
+  subscription_plans?: SubscriptionPlan;
+  profiles?: {
+    full_name: string;
+    email: string;
+  };
+}
+
 const AdminDashboard: React.FC = () => {
   const { user, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [users, setUsers] = useState<User[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlan[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
   const [stats, setStats] = useState<AdminStats>({
     totalUsers: 0,
     totalCourses: 0,
@@ -123,20 +177,17 @@ const AdminDashboard: React.FC = () => {
     freeUsers: 0
   });
 
-  // Course form state
+  // Course form state - Compatible con la estructura real de la BD
   const [courseForm, setCourseForm] = useState({
     title: '',
     description: '',
-    category: '',
-    level: 'beginner',
-    subscription_tier: 'basic',
-    instructor_id: '',
-    published: false,
     thumbnail_url: '',
-    intro_video_url: '',
+    price: '',
+    instructor_id: null, // UUID del instructor
+    category_id: null, // UUID de la categoría
+    level: 'beginner', // beginner | intermediate | advanced
     duration_hours: 0,
-    has_final_exam: false,
-    text_sections: [] as string[]
+    published: false // Se mapea a is_published en BD
   });
 
   // Lesson form state
@@ -164,7 +215,30 @@ const AdminDashboard: React.FC = () => {
   // UI State
   const [showLessonForm, setShowLessonForm] = useState(false);
   const [showExamForm, setShowExamForm] = useState(false);
+  const [showNotificationForm, setShowNotificationForm] = useState(false);
+  const [showPlanForm, setShowPlanForm] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
+
+  // Notification form state
+  const [notificationForm, setNotificationForm] = useState({
+    title: '',
+    message: '',
+    type: 'info' as 'info' | 'success' | 'warning' | 'error',
+    user_id: '',
+    action_url: '',
+    broadcast: false
+  });
+
+  // Subscription plan form state
+  const [planForm, setPlanForm] = useState({
+    name: '',
+    description: '',
+    price: 0,
+    duration_months: 1,
+    features: [] as string[],
+    is_active: true,
+    stripe_price_id: ''
+  });
 
   // User form state
   const [userForm, setUserForm] = useState({
@@ -177,15 +251,8 @@ const AdminDashboard: React.FC = () => {
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
 
-  const { execute: getAdminStats } = useEdgeFunction('admin', 'getAdminStats');
-  const { execute: getAllUsers } = useEdgeFunction('admin', 'getAllUsers');
+  // Edge Functions - Solo las que existen
   const { execute: getAllCourses } = useEdgeFunction('admin', 'getAllCourses');
-  const { execute: uploadFile } = useEdgeFunction('admin', 'uploadFile');
-  const { execute: createLesson } = useEdgeFunction('admin', 'createLesson');
-  const { execute: deleteLesson } = useEdgeFunction('admin', 'deleteLesson');
-  const { execute: createExam } = useEdgeFunction('admin', 'createExam');
-  const { execute: getCourseLessons } = useEdgeFunction('admin', 'getCourseLessons');
-
   const { execute: createCourse, loading: createCourseLoading } = useCreateCourse({
     onSuccess: () => {
       resetCourseForm();
@@ -242,57 +309,53 @@ const AdminDashboard: React.FC = () => {
     await Promise.all([
       loadStats(),
       loadUsers(),
-      loadCourses()
+      loadCourses(),
+      loadNotifications(),
+      loadSubscriptions(),
+      loadSubscriptionPlans()
     ]);
   };
 
   const loadStats = async () => {
     try {
-      const result = await getAdminStats();
-      if (result.data) {
-        setStats(result.data);
-      } else {
-        // Calcular estadísticas desde datos reales de Supabase
-        const [usersResult, coursesResult] = await Promise.all([
-          getAllUsers(),
-          getAllCourses()
-        ]);
+      // Calcular estadísticas desde datos reales de Supabase (sin Edge Functions)
+      const [usersResult, coursesResult] = await Promise.all([
+        supabase.from('profiles').select('user_id, created_at'),
+        getAllCourses()
+      ]);
 
-        const totalUsers = usersResult.data?.length || 0;
-        const totalCourses = coursesResult.data?.length || 0;
-        const publishedCourses = coursesResult.data?.filter(course => course.published).length || 0;
-        
-        // Calcular métricas de suscripción desde Supabase directamente
-        // TODO: Implementar cuando la tabla user_subscriptions esté disponible
-        const activeSubscriptions = 0;
-        const basicSubscriptions = 0;
-        const premiumSubscriptions = 0;
+      const totalUsers = usersResult.data?.length || 0;
+      const totalCourses = coursesResult.data?.length || 0;
+      const publishedCourses = coursesResult.data?.filter(course => course.published).length || 0;
+      
+      // Métricas de suscripción (TODO: implementar cuando esté disponible user_subscriptions)
+      const activeSubscriptions = 0;
+      const basicSubscriptions = 0; 
+      const premiumSubscriptions = 0;
+      const freeUsers = totalUsers - activeSubscriptions;
+      const totalRevenue = (basicSubscriptions * 29) + (premiumSubscriptions * 49);
 
-        const freeUsers = totalUsers - (activeSubscriptions || 0);
-        const totalRevenue = ((basicSubscriptions || 0) * 29) + ((premiumSubscriptions || 0) * 49);
+      // Usuarios nuevos este mes
+      const thisMonth = new Date();
+      thisMonth.setDate(1);
+      const newUsersThisMonth = usersResult.data?.filter(user => 
+        new Date(user.created_at) >= thisMonth
+      ).length || 0;
 
-        // Calcular usuarios nuevos este mes
-        const thisMonth = new Date();
-        thisMonth.setDate(1);
-        const newUsersThisMonth = usersResult.data?.filter(user => 
-          new Date(user.created_at) >= thisMonth
-        ).length || 0;
-
-        setStats({
-          totalUsers,
-          totalCourses,
-          totalRevenue,
-          activeSubscriptions: activeSubscriptions || 0,
-          newUsersThisMonth,
-          coursesPublishedThisMonth: publishedCourses,
-          basicSubscriptions: basicSubscriptions || 0,
-          premiumSubscriptions: premiumSubscriptions || 0,
-          freeUsers
-        });
-      }
+      setStats({
+        totalUsers,
+        totalCourses,
+        totalRevenue,
+        activeSubscriptions,
+        newUsersThisMonth,
+        coursesPublishedThisMonth: publishedCourses,
+        basicSubscriptions,
+        premiumSubscriptions,
+        freeUsers
+      });
     } catch (error) {
       console.error('Error loading stats:', error);
-      // Fallback a datos por defecto solo en caso de error
+      // Fallback a datos por defecto
       setStats({
         totalUsers: 0,
         totalCourses: 0,
@@ -309,36 +372,26 @@ const AdminDashboard: React.FC = () => {
 
   const loadUsers = async () => {
     try {
-      const result = await getAllUsers();
-      if (result.data) {
-        setUsers(result.data);
-      } else {
-        // Si no hay Edge Function, consultar directamente Supabase
-        const { data: usersData, error } = await supabase
-          .from('profiles')
-          .select(`
-            user_id,
-            full_name,
-            role,
-            created_at,
-            updated_at
-          `)
-          .order('created_at', { ascending: false });
+      // Consultar directamente Supabase (sin Edge Functions)
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, email, role, created_at')
+        .order('created_at', { ascending: false });
 
-        if (!error && usersData) {
-          const formattedUsers = usersData.map(user => {
-            return {
-              id: user.user_id,
-              email: 'usuario@ejemplo.com', // TODO: Obtener email real de auth.users
-              full_name: user.full_name || 'Sin nombre',
-              role: (user.role as UserRole) || 'student',
-              created_at: user.created_at,
-              last_sign_in: user.updated_at || user.created_at,
-              subscription_status: false // TODO: Obtener de user_subscriptions
-            };
-          });
-          setUsers(formattedUsers);
-        }
+      if (!error && data) {
+        const formattedUsers = data.map(user => ({
+          id: user.user_id,
+          email: user.email || 'usuario@ejemplo.com',
+          full_name: user.full_name || 'Sin nombre',
+          role: (user.role as UserRole) || 'student',
+          created_at: user.created_at,
+          last_sign_in: user.created_at,
+          subscription_status: false
+        }));
+        setUsers(formattedUsers);
+      } else {
+        console.error('Error loading users:', error);
+        setUsers([]);
       }
     } catch (error) {
       console.error('Error loading users:', error);
@@ -390,18 +443,63 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const loadNotifications = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-notifications', {
+        method: 'GET'
+      });
+
+      if (!error && data?.data) {
+        setNotifications(data.data);
+      }
+    } catch (error) {
+      console.error('Error loading notifications:', error);
+      setNotifications([]);
+    }
+  };
+
+  const loadSubscriptions = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-subscriptions', {
+        method: 'GET'
+      });
+
+      if (!error && data?.data) {
+        setSubscriptions(data.data);
+      }
+    } catch (error) {
+      console.error('Error loading subscriptions:', error);
+      setSubscriptions([]);
+    }
+  };
+
+  const loadSubscriptionPlans = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-subscriptions', {
+        method: 'GET',
+        body: { action: 'plans' }
+      });
+
+      if (!error && data?.data) {
+        setSubscriptionPlans(data.data);
+      }
+    } catch (error) {
+      console.error('Error loading subscription plans:', error);
+      setSubscriptionPlans([]);
+    }
+  };
+
   const resetCourseForm = () => {
     setCourseForm({
       title: '',
       description: '',
-      category: '',
-      level: 'beginner',
-      subscription_tier: 'basic',
-      instructor_id: '',
-      published: false,
       thumbnail_url: '',
+      price: '',
+      instructor_id: null,
+      category_id: null,
+      level: 'beginner',
       duration_hours: 0,
-      has_final_exam: false
+      published: false
     });
   };
 
@@ -415,12 +513,28 @@ const AdminDashboard: React.FC = () => {
   };
 
   const handleCreateCourse = async () => {
-    await createCourse(courseForm);
+    try {
+      const cleanedData = prepareCourseDataForDB(courseForm);
+      await createCourse(cleanedData);
+      console.log('Curso creado exitosamente');
+    } catch (error) {
+      console.error('Error creating course:', error);
+      const userFriendlyMessage = handleUUIDError(error);
+      alert(userFriendlyMessage);
+    }
   };
 
   const handleUpdateCourse = async () => {
     if (editingCourse) {
-      await updateCourse(editingCourse.id, courseForm);
+      try {
+        const cleanedData = prepareCourseDataForDB(courseForm);
+        await updateCourse(editingCourse.id, cleanedData);
+        console.log('Curso actualizado exitosamente');
+      } catch (error) {
+        console.error('Error updating course:', error);
+        const userFriendlyMessage = handleUUIDError(error);
+        alert(userFriendlyMessage);
+      }
     }
   };
 
@@ -466,112 +580,24 @@ const AdminDashboard: React.FC = () => {
   };
 
   const handleThumbnailUpload = async (file: File) => {
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('bucket', 'course-thumbnails');
-      
-      const result = await uploadFile(formData);
-      if (result.data?.url) {
-        setCourseForm({ ...courseForm, thumbnail_url: result.data.url });
-      }
-    } catch (error) {
-      console.error('Error uploading thumbnail:', error);
-    }
+    // Implementación futura: upload de thumbnails con Supabase Storage
+    console.log('Funcionalidad de upload pendiente de implementar:', file.name);
   };
 
-  const handleIntroVideoUpload = async (file: File) => {
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('bucket', 'course-intro-videos');
-
-      const result = await uploadFile(formData);
-      if (result.data?.url) {
-        setCourseForm({ ...courseForm, intro_video_url: result.data.url });
-      }
-    } catch (error) {
-      console.error('Error uploading intro video:', error);
-    }
-  };
-
-  const addTextSection = () => {
-    setCourseForm({
-      ...courseForm,
-      text_sections: [...courseForm.text_sections, '']
-    });
-  };
-
-  const updateTextSection = (index: number, text: string) => {
-    const sections = [...courseForm.text_sections];
-    sections[index] = text;
-    setCourseForm({ ...courseForm, text_sections: sections });
-  };
-
-  const removeTextSection = (index: number) => {
-    const sections = courseForm.text_sections.filter((_, i) => i !== index);
-    setCourseForm({ ...courseForm, text_sections: sections });
-  };
-
-  // Lesson Management Functions
+  // Gestión de lecciones - Implementación futura
   const handleCreateLesson = async () => {
-    if (!selectedCourse) return;
-    
-    try {
-      const lessonData = {
-        ...lessonForm,
-        course_id: selectedCourse.id,
-        order_index: lessons.length + 1
-      };
-      
-      const result = await createLesson(lessonData);
-      if (result.data) {
-        setLessons([...lessons, result.data]);
-        setLessonForm({
-          title: '',
-          description: '',
-          content_type: 'video',
-          video_url: '',
-          content_url: '',
-          materials_url: '',
-          duration_minutes: 0,
-          is_free: false
-        });
-        setShowLessonForm(false);
-      }
-    } catch (error) {
-      console.error('Error creating lesson:', error);
-    }
+    console.log('Funcionalidad de lecciones pendiente de implementar');
   };
 
   const handleDeleteLesson = async (lessonId: string) => {
-    if (confirm('¿Estás seguro de que deseas eliminar esta lección?')) {
-      try {
-        await deleteLesson({ id: lessonId });
-        setLessons(lessons.filter(l => l.id !== lessonId));
-      } catch (error) {
-        console.error('Error deleting lesson:', error);
-      }
-    }
+    console.log('Eliminación de lección pendiente:', lessonId);
+  };
+    // TODO: Implementar con supabase.from('lessons').delete()
   };
 
-  // Exam Management Functions
+  // TODO: Implementar gestión de exámenes
   const handleCreateExam = async () => {
-    if (!selectedCourse) return;
-    
-    try {
-      const examData = {
-        ...examForm,
-        course_id: selectedCourse.id
-      };
-      
-      const result = await createExam(examData);
-      if (result.data) {
-        setShowExamForm(false);
-      }
-    } catch (error) {
-      console.error('Error creating exam:', error);
-    }
+    console.log('Creación de exámenes pendiente de implementar');
   };
 
   const addExamQuestion = () => {
@@ -608,33 +634,24 @@ const AdminDashboard: React.FC = () => {
     setSelectedCourse(course);
     setCourseForm({
       title: course.title,
-      description: course.description,
-      category: course.category,
-      level: course.level,
-      subscription_tier: course.subscription_tier,
-      instructor_id: '', // Would be populated from course data
-      published: course.published,
+      description: course.description || '',
       thumbnail_url: course.thumbnail_url || '',
-      intro_video_url: course.intro_video_url || '',
+      price: course.price?.toString() || '',
+      instructor_id: course.instructor_id || null,
+      category_id: course.category_id || null,
+      level: course.level || 'beginner',
       duration_hours: course.duration_hours || 0,
-      has_final_exam: course.has_final_exam || false,
-      text_sections: course.text_sections || []
+      published: course.is_published || false // Mapear is_published a published
     });
-    setShowExamForm(course.has_final_exam || false);
     
     // Load lessons for this course
     loadCourseLessons(course.id);
   };
 
   const loadCourseLessons = async (courseId: string) => {
-    try {
-      const result = await getCourseLessons({ course_id: courseId });
-      if (result.data) {
-        setLessons(result.data);
-      }
-    } catch (error) {
-      console.error('Error loading lessons:', error);
-    }
+    console.log('Carga de lecciones pendiente para curso:', courseId);
+    // TODO: Implementar con supabase.from('lessons').select()
+    setLessons([]);
   };
 
   const startEditingUser = (user: User) => {
@@ -645,6 +662,164 @@ const AdminDashboard: React.FC = () => {
       role: user.role,
       password: ''
     });
+  };
+
+  // Notification handlers
+  const handleCreateNotification = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-notifications', {
+        method: 'POST',
+        body: notificationForm
+      });
+
+      if (!error && data?.data) {
+        setNotificationForm({
+          title: '',
+          message: '',
+          type: 'info',
+          user_id: '',
+          action_url: '',
+          broadcast: false
+        });
+        setShowNotificationForm(false);
+        loadNotifications();
+      }
+    } catch (error) {
+      console.error('Error creating notification:', error);
+    }
+  };
+
+  const handleDeleteNotification = async (notificationId: string) => {
+    if (confirm('¿Estás seguro de que deseas eliminar esta notificación?')) {
+      try {
+        await supabase.functions.invoke('admin-notifications', {
+          method: 'DELETE',
+          body: { notificationId }
+        });
+        loadNotifications();
+      } catch (error) {
+        console.error('Error deleting notification:', error);
+      }
+    }
+  };
+
+  const handleMarkAsRead = async (notificationId: string) => {
+    try {
+      await supabase.functions.invoke('admin-notifications', {
+        method: 'PUT',
+        body: { notificationId, is_read: true }
+      });
+      loadNotifications();
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  // Subscription Plan handlers
+  const handleCreatePlan = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-subscriptions', {
+        method: 'POST',
+        body: { ...planForm, type: 'plan' }
+      });
+
+      if (!error && data?.data) {
+        setPlanForm({
+          name: '',
+          description: '',
+          price: 0,
+          duration_months: 1,
+          features: [],
+          is_active: true,
+          stripe_price_id: ''
+        });
+        setShowPlanForm(false);
+        loadSubscriptionPlans();
+      }
+    } catch (error) {
+      console.error('Error creating plan:', error);
+    }
+  };
+
+  const handleUpdatePlan = async () => {
+    if (selectedPlan) {
+      try {
+        await supabase.functions.invoke('admin-subscriptions', {
+          method: 'PUT',
+          body: { ...planForm, type: 'plan', planId: selectedPlan.id }
+        });
+        setPlanForm({
+          name: '',
+          description: '',
+          price: 0,
+          duration_months: 1,
+          features: [],
+          is_active: true,
+          stripe_price_id: ''
+        });
+        setSelectedPlan(null);
+        setShowPlanForm(false);
+        loadSubscriptionPlans();
+      } catch (error) {
+        console.error('Error updating plan:', error);
+      }
+    }
+  };
+
+  const handleDeletePlan = async (planId: string) => {
+    if (confirm('¿Estás seguro de que deseas desactivar este plan?')) {
+      try {
+        await supabase.functions.invoke('admin-subscriptions', {
+          method: 'DELETE',
+          body: { planId }
+        });
+        loadSubscriptionPlans();
+      } catch (error) {
+        console.error('Error deleting plan:', error);
+      }
+    }
+  };
+
+  const handleRenewSubscription = async (subscriptionId: string) => {
+    if (confirm('¿Estás seguro de que deseas renovar esta suscripción?')) {
+      try {
+        await supabase.functions.invoke('admin-subscriptions', {
+          method: 'PUT',
+          body: { subscriptionId, action: 'renew' }
+        });
+        loadSubscriptions();
+      } catch (error) {
+        console.error('Error renewing subscription:', error);
+      }
+    }
+  };
+
+  const handleCancelSubscription = async (subscriptionId: string) => {
+    if (confirm('¿Estás seguro de que deseas cancelar esta suscripción?')) {
+      try {
+        await supabase.functions.invoke('admin-subscriptions', {
+          method: 'DELETE',
+          body: { subscriptionId }
+        });
+        loadSubscriptions();
+      } catch (error) {
+        console.error('Error cancelling subscription:', error);
+      }
+    }
+  };
+
+  const startEditingPlan = (plan: SubscriptionPlan) => {
+    setSelectedPlan(plan);
+    setPlanForm({
+      name: plan.name,
+      description: plan.description,
+      price: plan.price,
+      duration_months: plan.duration_months,
+      features: plan.features,
+      is_active: plan.is_active,
+      stripe_price_id: plan.stripe_price_id || ''
+    });
+    setShowPlanForm(true);
   };
 
   const getRoleColor = (role: string) => {
@@ -705,11 +880,14 @@ const AdminDashboard: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="overview">Resumen</TabsTrigger>
           <TabsTrigger value="courses">Cursos</TabsTrigger>
           <TabsTrigger value="content">Contenido</TabsTrigger>
           <TabsTrigger value="users">Usuarios</TabsTrigger>
+          <TabsTrigger value="notifications">Notificaciones</TabsTrigger>
+          <TabsTrigger value="subscriptions">Suscripciones</TabsTrigger>
+          <TabsTrigger value="database">Base de Datos</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -889,15 +1067,16 @@ const AdminDashboard: React.FC = () => {
                     value={courseForm.title}
                     onChange={(e) => setCourseForm({ ...courseForm, title: e.target.value })}
                     placeholder="Título del curso"
+                    required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="course-category">Categoría</Label>
-                  <Input
-                    id="course-category"
-                    value={courseForm.category}
-                    onChange={(e) => setCourseForm({ ...courseForm, category: e.target.value })}
-                    placeholder="Categoría del curso"
+                  <CategorySelector
+                    value={courseForm.category_id}
+                    onValueChange={(categoryId) => setCourseForm({ ...courseForm, category_id: categoryId })}
+                    required={true}
+                    label="Categoría"
+                    placeholder="Selecciona una categoría"
                   />
                 </div>
                 <div className="space-y-2">
@@ -917,17 +1096,16 @@ const AdminDashboard: React.FC = () => {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="course-tier">Tier de Suscripción</Label>
-                  <Select value={courseForm.subscription_tier} onValueChange={(value) => setCourseForm({ ...courseForm, subscription_tier: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar tier" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="free">Free</SelectItem>
-                      <SelectItem value="basic">Basic ($29/mes)</SelectItem>
-                      <SelectItem value="premium">Premium ($49/mes)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="course-price">Precio (opcional)</Label>
+                  <Input
+                    id="course-price"
+                    type="number"
+                    step="0.01"
+                    value={courseForm.price}
+                    onChange={(e) => setCourseForm({ ...courseForm, price: e.target.value })}
+                    placeholder="0.00"
+                    min="0"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="course-duration">Duración (horas)</Label>
@@ -941,44 +1119,23 @@ const AdminDashboard: React.FC = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="course-thumbnail">Imagen del Curso</Label>
-                  <div className="flex items-center space-x-2">
-                    <Input
-                      id="course-thumbnail"
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleThumbnailUpload(file);
+                  <Label htmlFor="course-thumbnail">URL de Imagen (opcional)</Label>
+                  <Input
+                    id="course-thumbnail"
+                    value={courseForm.thumbnail_url}
+                    onChange={(e) => setCourseForm({ ...courseForm, thumbnail_url: e.target.value })}
+                    placeholder="https://example.com/image.jpg"
+                  />
+                  {courseForm.thumbnail_url && (
+                    <img
+                      src={courseForm.thumbnail_url}
+                      alt="Vista previa"
+                      className="w-20 h-12 object-cover rounded border"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
                       }}
                     />
-                    {courseForm.thumbnail_url && (
-                      <img
-                        src={courseForm.thumbnail_url}
-                        alt="Thumbnail"
-                        className="w-12 h-12 object-cover rounded"
-                      />
-                    )}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="course-intro-video">Video Introductorio</Label>
-                  <div className="flex items-center space-x-2">
-                    <Input
-                      id="course-intro-video"
-                      type="file"
-                      accept="video/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleIntroVideoUpload(file);
-                      }}
-                    />
-                    {courseForm.intro_video_url && (
-                      <video controls className="w-24 h-12">
-                        <source src={courseForm.intro_video_url} type="video/mp4" />
-                      </video>
-                    )}
-                  </div>
+                  )}
                 </div>
                 <div className="md:col-span-2 space-y-2">
                   <Label htmlFor="course-description">Descripción</Label>
@@ -987,52 +1144,18 @@ const AdminDashboard: React.FC = () => {
                     value={courseForm.description}
                     onChange={(e) => setCourseForm({ ...courseForm, description: e.target.value })}
                     placeholder="Descripción del curso"
-                    rows={3}
+                    rows={4}
                   />
                 </div>
-                <div className="md:col-span-2 space-y-2">
-                  <Label>Secciones de Texto</Label>
-                  {courseForm.text_sections.map((section, idx) => (
-                    <div key={`section-${idx}`} className="flex items-start space-x-2">
-                      <Textarea
-                        value={section}
-                        onChange={(e) => updateTextSection(idx, e.target.value)}
-                        rows={2}
-                        className="flex-1"
-                      />
-                      <Button variant="outline" size="sm" onClick={() => removeTextSection(idx)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                  <Button variant="outline" size="sm" onClick={addTextSection}>
-                    <Plus className="h-4 w-4 mr-2" /> Agregar Sección
-                  </Button>
-                </div>
-                <div className="md:col-span-2 flex items-center space-x-4">
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="has-final-exam"
-                      checked={courseForm.has_final_exam}
-                      onChange={(e) => {
-                        setCourseForm({ ...courseForm, has_final_exam: e.target.checked });
-                        setShowExamForm(e.target.checked);
-                      }}
-                      className="rounded"
-                    />
-                    <Label htmlFor="has-final-exam">Incluir examen final</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="course-published"
-                      checked={courseForm.published}
-                      onChange={(e) => setCourseForm({ ...courseForm, published: e.target.checked })}
-                      className="rounded"
-                    />
-                    <Label htmlFor="course-published">Publicar curso</Label>
-                  </div>
+                <div className="md:col-span-2 flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="course-published"
+                    checked={courseForm.published}
+                    onChange={(e) => setCourseForm({ ...courseForm, published: e.target.checked })}
+                    className="rounded"
+                  />
+                  <Label htmlFor="course-published">Publicar curso (visible para los estudiantes)</Label>
                 </div>
               </div>
               <div className="flex items-center space-x-4 mt-4">
@@ -1685,6 +1808,380 @@ const AdminDashboard: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="database" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Validador de Base de Datos</CardTitle>
+              <CardDescription>
+                Herramienta para verificar y corregir la alineación entre la base de datos y el frontend
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8">
+                <p className="text-muted-foreground mb-4">
+                  Accede al validador completo de base de datos para verificar la estructura y corregir problemas de foreign keys.
+                </p>
+                <Link to="/admin/database">
+                  <Button>
+                    Abrir Validador de Base de Datos
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="notifications" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold">Gestión de Notificaciones</h2>
+            <Dialog open={showNotificationForm} onOpenChange={setShowNotificationForm}>
+              <DialogTrigger asChild>
+                <Button><Plus className="h-4 w-4 mr-2" />Nueva Notificación</Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Crear Notificación</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="notification-title">Título</Label>
+                    <Input
+                      id="notification-title"
+                      value={notificationForm.title}
+                      onChange={(e) => setNotificationForm({...notificationForm, title: e.target.value})}
+                      placeholder="Título de la notificación"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="notification-message">Mensaje</Label>
+                    <Textarea
+                      id="notification-message"
+                      value={notificationForm.message}
+                      onChange={(e) => setNotificationForm({...notificationForm, message: e.target.value})}
+                      placeholder="Contenido del mensaje"
+                      rows={4}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="notification-type">Tipo</Label>
+                      <Select
+                        value={notificationForm.type}
+                        onValueChange={(value: 'info' | 'success' | 'warning' | 'error') => 
+                          setNotificationForm({...notificationForm, type: value})
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="info">Información</SelectItem>
+                          <SelectItem value="success">Éxito</SelectItem>
+                          <SelectItem value="warning">Advertencia</SelectItem>
+                          <SelectItem value="error">Error</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="notification-url">URL de Acción (Opcional)</Label>
+                      <Input
+                        id="notification-url"
+                        value={notificationForm.action_url}
+                        onChange={(e) => setNotificationForm({...notificationForm, action_url: e.target.value})}
+                        placeholder="https://..."
+                      />
+                    </div>
+                  </div>
+                  {!notificationForm.broadcast && (
+                    <div>
+                      <Label htmlFor="notification-user">Usuario Específico</Label>
+                      <Select
+                        value={notificationForm.user_id}
+                        onValueChange={(value) => setNotificationForm({...notificationForm, user_id: value})}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar usuario" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {users.map(user => (
+                            <SelectItem key={user.id} value={user.id}>
+                              {user.full_name} ({user.email})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="broadcast"
+                      checked={notificationForm.broadcast}
+                      onChange={(e) => setNotificationForm({...notificationForm, broadcast: e.target.checked})}
+                    />
+                    <Label htmlFor="broadcast">Enviar a todos los usuarios</Label>
+                  </div>
+                  <div className="flex justify-end space-x-2">
+                    <Button variant="outline" onClick={() => setShowNotificationForm(false)}>
+                      Cancelar
+                    </Button>
+                    <Button onClick={handleCreateNotification}>
+                      <Send className="h-4 w-4 mr-2" />Enviar
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Notificaciones Recientes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {notifications.map((notification) => (
+                  <div key={notification.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2">
+                        <h4 className="font-medium">{notification.title}</h4>
+                        <Badge variant={
+                          notification.type === 'success' ? 'default' :
+                          notification.type === 'warning' ? 'secondary' :
+                          notification.type === 'error' ? 'destructive' : 'outline'
+                        }>
+                          {notification.type}
+                        </Badge>
+                        {!notification.is_read && <Badge variant="destructive">No leída</Badge>}
+                      </div>
+                      <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
+                      {notification.profiles && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Para: {notification.profiles.full_name} ({notification.profiles.email})
+                        </p>
+                      )}
+                      <p className="text-xs text-gray-400 mt-1">
+                        {new Date(notification.created_at).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="flex space-x-2">
+                      {!notification.is_read && (
+                        <Button size="sm" variant="outline" onClick={() => handleMarkAsRead(notification.id)}>
+                          <CheckCircle className="h-4 w-4" />
+                        </Button>
+                      )}
+                      <Button size="sm" variant="destructive" onClick={() => handleDeleteNotification(notification.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {notifications.length === 0 && (
+                  <p className="text-center text-gray-500 py-8">No hay notificaciones</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="subscriptions" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold">Gestión de Suscripciones</h2>
+            <Dialog open={showPlanForm} onOpenChange={setShowPlanForm}>
+              <DialogTrigger asChild>
+                <Button><Plus className="h-4 w-4 mr-2" />Nuevo Plan</Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>{selectedPlan ? 'Editar Plan' : 'Crear Plan'}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="plan-name">Nombre del Plan</Label>
+                      <Input
+                        id="plan-name"
+                        value={planForm.name}
+                        onChange={(e) => setPlanForm({...planForm, name: e.target.value})}
+                        placeholder="Plan Básico"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="plan-price">Precio (USD)</Label>
+                      <Input
+                        id="plan-price"
+                        type="number"
+                        value={planForm.price}
+                        onChange={(e) => setPlanForm({...planForm, price: parseFloat(e.target.value) || 0})}
+                        placeholder="29.99"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="plan-description">Descripción</Label>
+                    <Textarea
+                      id="plan-description"
+                      value={planForm.description}
+                      onChange={(e) => setPlanForm({...planForm, description: e.target.value})}
+                      placeholder="Descripción del plan..."
+                      rows={3}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="plan-duration">Duración (meses)</Label>
+                      <Input
+                        id="plan-duration"
+                        type="number"
+                        value={planForm.duration_months}
+                        onChange={(e) => setPlanForm({...planForm, duration_months: parseInt(e.target.value) || 1})}
+                        placeholder="1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="plan-stripe">Stripe Price ID (Opcional)</Label>
+                      <Input
+                        id="plan-stripe"
+                        value={planForm.stripe_price_id}
+                        onChange={(e) => setPlanForm({...planForm, stripe_price_id: e.target.value})}
+                        placeholder="price_..."
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Características (separadas por comas)</Label>
+                    <Textarea
+                      value={planForm.features.join(', ')}
+                      onChange={(e) => setPlanForm({...planForm, features: e.target.value.split(', ').filter(f => f.trim())})}
+                      placeholder="Acceso a todos los cursos, Soporte prioritario, Certificados"
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="plan-active"
+                      checked={planForm.is_active}
+                      onChange={(e) => setPlanForm({...planForm, is_active: e.target.checked})}
+                    />
+                    <Label htmlFor="plan-active">Plan activo</Label>
+                  </div>
+                  <div className="flex justify-end space-x-2">
+                    <Button variant="outline" onClick={() => {
+                      setShowPlanForm(false);
+                      setSelectedPlan(null);
+                      setPlanForm({
+                        name: '',
+                        description: '',
+                        price: 0,
+                        duration_months: 1,
+                        features: [],
+                        is_active: true,
+                        stripe_price_id: ''
+                      });
+                    }}>
+                      Cancelar
+                    </Button>
+                    <Button onClick={selectedPlan ? handleUpdatePlan : handleCreatePlan}>
+                      <Save className="h-4 w-4 mr-2" />
+                      {selectedPlan ? 'Actualizar' : 'Crear'}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Planes de Suscripción */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Planes de Suscripción</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {subscriptionPlans.map((plan) => (
+                    <div key={plan.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2">
+                          <h4 className="font-medium">{plan.name}</h4>
+                          <Badge variant={plan.is_active ? 'default' : 'secondary'}>
+                            {plan.is_active ? 'Activo' : 'Inactivo'}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1">{plan.description}</p>
+                        <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
+                          <span>${plan.price}/{plan.duration_months} mes{plan.duration_months > 1 ? 'es' : ''}</span>
+                          <span>{plan.features.length} características</span>
+                        </div>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button size="sm" variant="outline" onClick={() => startEditingPlan(plan)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => handleDeletePlan(plan.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  {subscriptionPlans.length === 0 && (
+                    <p className="text-center text-gray-500 py-8">No hay planes configurados</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Suscripciones Activas */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Suscripciones Activas</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {subscriptions.map((subscription) => (
+                    <div key={subscription.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2">
+                          <h4 className="font-medium">
+                            {subscription.profiles?.full_name || 'Usuario'}
+                          </h4>
+                          <Badge variant={
+                            subscription.status === 'active' ? 'default' :
+                            subscription.status === 'cancelled' ? 'destructive' :
+                            subscription.status === 'expired' ? 'secondary' : 'outline'
+                          }>
+                            {subscription.status}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Plan: {subscription.subscription_plans?.name}
+                        </p>
+                        <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
+                          <span>Inicio: {new Date(subscription.start_date).toLocaleDateString()}</span>
+                          <span>Fin: {new Date(subscription.end_date).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                      <div className="flex space-x-2">
+                        {subscription.status === 'active' && (
+                          <Button size="sm" variant="outline" onClick={() => handleRenewSubscription(subscription.id)}>
+                            <RefreshCw className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button size="sm" variant="destructive" onClick={() => handleCancelSubscription(subscription.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  {subscriptions.length === 0 && (
+                    <p className="text-center text-gray-500 py-8">No hay suscripciones activas</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

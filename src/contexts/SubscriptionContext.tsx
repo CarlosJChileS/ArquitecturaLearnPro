@@ -7,13 +7,15 @@ interface SubscriptionData {
   subscription_tier: string | null;
   subscription_end: string | null;
   plan_id: string | null;
+  plan_name?: string;
+  status?: string;
 }
 
 interface SubscriptionContextType {
   subscription: SubscriptionData;
   loading: boolean;
   refreshSubscription: () => Promise<void>;
-  createCheckoutSession: (planType: 'monthly' | 'annual', planName: string) => Promise<{ url?: string; error?: string }>;
+  createCheckoutSession: (planType: 'monthly' | 'annual', planName: string, mode?: 'hosted' | 'embedded') => Promise<{ url?: string; sessionId?: string; clientSecret?: string; error?: string }>;
   createCustomerPortalSession: () => Promise<{ url?: string; error?: string }>;
 }
 
@@ -28,7 +30,6 @@ export const useSubscription = () => {
 };
 
 export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Primero, todos los hooks (obligatorio para las reglas de React)
   const [subscription, setSubscription] = useState<SubscriptionData>({
     subscribed: false,
     subscription_tier: null,
@@ -37,47 +38,92 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   });
   const [loading, setLoading] = useState(false);
   
-  const { session } = useAuth();
+  const { user, session } = useAuth();
 
   const refreshSubscription = async () => {
-    if (!session) return;
+    if (!user) return;
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('check-subscription', {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
+      // Usar la nueva función para obtener tier de suscripción
+      const { data: tierData, error: tierError } = await supabase
+        .rpc('get_subscription_tier', { input_user_id: user.id });
 
-      if (error) {
-        console.error('Error checking subscription:', error);
-        return;
-      }
+      // Obtener detalles completos de la suscripción
+      const { data: subscriptionData, error: subError } = await supabase
+        .from('subscriptions')
+        .select(`
+          *,
+          subscription_plans!inner(
+            name,
+            price,
+            duration_months
+          )
+        `)
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .single();
 
-      if (data) {
+      if (!tierError && tierData) {
+        const isSubscribed = tierData !== 'free';
+        const tier = tierData;
+        
         setSubscription({
-          subscribed: data.subscribed || false,
-          subscription_tier: data.subscription_tier || null,
-          subscription_end: data.subscription_end || null,
-          plan_id: data.plan_id || null,
+          subscribed: isSubscribed,
+          subscription_tier: tier,
+          subscription_end: subscriptionData?.current_period_end || null,
+          plan_id: subscriptionData?.plan_id || null,
+          plan_name: subscriptionData?.subscription_plans?.name || null,
+          status: subscriptionData?.status || null,
+        });
+      } else {
+        // Usuario sin suscripción activa
+        setSubscription({
+          subscribed: false,
+          subscription_tier: 'free',
+          subscription_end: null,
+          plan_id: null,
         });
       }
     } catch (error) {
       console.error('Error refreshing subscription:', error);
+      setSubscription({
+        subscribed: false,
+        subscription_tier: 'free',
+        subscription_end: null,
+        plan_id: null,
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const createCheckoutSession = async (planType: 'monthly' | 'annual', planName: string) => {
-    if (!session) {
+  const createCheckoutSession = async (planType: 'monthly' | 'annual', planName: string, mode: 'hosted' | 'embedded' = 'hosted') => {
+    if (!user || !session) {
       return { error: 'No hay sesión activa' };
     }
 
     try {
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: { planType, planName },
+      // Buscar el plan en la base de datos
+      const { data: planData, error: planError } = await supabase
+        .from('subscription_plans')
+        .select('*')
+        .eq('name', planName)
+        .single();
+
+      if (planError || !planData) {
+        return { error: 'Plan no encontrado' };
+      }
+
+      // Crear sesión de checkout con Stripe
+      const { data, error } = await supabase.functions.invoke('stripe-checkout', {
+        body: { 
+          planId: planData.id,
+          planName: planName,
+          planType: planType,
+          userId: user.id,
+          mode: mode // Agregar el modo (hosted/embedded)
+        },
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
@@ -88,7 +134,15 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         return { error: error.message };
       }
 
-      return { url: data.url };
+      // Retornar respuesta según el modo
+      if (mode === 'embedded') {
+        return { 
+          sessionId: data.sessionId,
+          clientSecret: data.clientSecret
+        };
+      } else {
+        return { url: data.url };
+      }
     } catch (error) {
       console.error('Error creating checkout session:', error);
       return { error: 'Error al crear la sesión de pago' };
@@ -96,12 +150,13 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   };
 
   const createCustomerPortalSession = async () => {
-    if (!session) {
+    if (!user || !session) {
       return { error: 'No hay sesión activa' };
     }
 
     try {
-      const { data, error } = await supabase.functions.invoke('customer-portal', {
+      const { data, error } = await supabase.functions.invoke('create-stripe-portal', {
+        body: { userId: user.id },
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
@@ -120,17 +175,17 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   };
 
   useEffect(() => {
-    if (session) {
+    if (user) {
       refreshSubscription();
     } else {
       setSubscription({
         subscribed: false,
-        subscription_tier: null,
+        subscription_tier: 'free',
         subscription_end: null,
         plan_id: null,
       });
     }
-  }, [session]);
+  }, [user]);
 
   const value: SubscriptionContextType = useMemo(() => ({
     subscription,

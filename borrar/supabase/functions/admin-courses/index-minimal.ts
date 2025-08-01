@@ -1,0 +1,138 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, PUT, DELETE',
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  try {
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+
+    const { method } = req
+    const url = new URL(req.url)
+    const courseId = url.searchParams.get('courseId')
+
+    switch (method) {
+      case 'GET':
+        if (courseId) {
+          const { data, error } = await supabaseClient
+            .from('courses')
+            .select('*')
+            .eq('id', courseId)
+            .single()
+
+          if (error) {
+            return new Response(JSON.stringify({ error: error.message }), {
+              status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            })
+          }
+
+          return new Response(JSON.stringify(data), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          })
+        } else {
+          const { data, error } = await supabaseClient
+            .from('courses')
+            .select('*')
+            .order('created_at', { ascending: false })
+
+          if (error) {
+            return new Response(JSON.stringify({ error: error.message }), {
+              status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            })
+          }
+
+          return new Response(JSON.stringify(data || []), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          })
+        }
+
+      case 'POST':
+        const postData = await req.json()
+        
+        const { data: newCourse, error: createError } = await supabaseClient
+          .from('courses')
+          .insert(postData)
+          .select('*')
+          .single()
+
+        if (createError) {
+          return new Response(JSON.stringify({ error: createError.message }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          })
+        }
+
+        return new Response(JSON.stringify(newCourse), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+
+      case 'PUT':
+        if (!courseId) {
+          return new Response(JSON.stringify({ error: 'Course ID is required' }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          })
+        }
+
+        const putData = await req.json()
+        
+        const { data: updatedCourse, error: updateError } = await supabaseClient
+          .from('courses')
+          .update(putData)
+          .eq('id', courseId)
+          .select('*')
+          .single()
+
+        if (updateError) {
+          return new Response(JSON.stringify({ error: updateError.message }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          })
+        }
+
+        return new Response(JSON.stringify(updatedCourse), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+
+      case 'DELETE':
+        if (!courseId) {
+          return new Response(JSON.stringify({ error: 'Course ID is required' }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          })
+        }
+
+        const { error: deleteError } = await supabaseClient
+          .from('courses')
+          .delete()
+          .eq('id', courseId)
+
+        if (deleteError) {
+          return new Response(JSON.stringify({ error: deleteError.message }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          })
+        }
+
+        return new Response(JSON.stringify({ message: 'Course deleted successfully' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+
+      default:
+        return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+          status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+    }
+
+  } catch (error) {
+    return new Response(JSON.stringify({ error: 'Internal server error', details: error.message }), {
+      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
+  }
+})

@@ -1,19 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useSubscription } from '@/contexts/SubscriptionContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useEdgeFunction, useGetEnrollment } from '@/hooks/useEdgeFunctions';
 import { 
   Play, Clock, Users, Star, BookOpen, Award, 
   ChevronRight, Share2, Heart, CheckCircle,
   Bookmark
 } from 'lucide-react';
 import CourseReviews from '@/components/CourseReviews';
+import CourseVideoPreview from '@/components/CourseVideoPreview';
 import { supabase } from '@/lib/supabase-mvp';
 import { useToast } from '@/hooks/use-toast';
 
@@ -52,7 +51,8 @@ interface Course {
   rating: number;
   rating_count: number;
   thumbnail_url: string;
-  trailer_url?: string;
+  intro_video_url?: string;
+  intro_video_type?: 'upload' | 'youtube';
   features: string[];
   requirements: string[];
   what_you_learn: string[];
@@ -65,6 +65,7 @@ interface Course {
 interface Enrollment {
   id: string;
   course_id: string;
+  enrolled_at: string;
   progress_percentage: number;
   last_accessed: string;
   completed_at?: string;
@@ -75,24 +76,18 @@ const CourseDetail: React.FC = () => {
   const { courseId } = useParams<{ courseId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { subscription } = useSubscription();
   const { toast } = useToast();
-  const hasActiveSubscription =
-    subscription.subscribed &&
-    subscription.subscription_end &&
-    new Date(subscription.subscription_end) > new Date();
+  
+  console.log('CourseDetail component mounted with courseId:', courseId);
   
   const [course, setCourse] = useState<Course | null>(null);
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
   const [isEnrolling, setIsEnrolling] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Cambié a true para mostrar loading
   const [activeTab, setActiveTab] = useState('overview');
 
-  const { execute: getCourse } = useEdgeFunction('course', 'getCourse');
-  const { execute: enrollCourse } = useEdgeFunction('course', 'enrollCourse');
-  const { execute: getEnrollment } = useEdgeFunction('course', 'getEnrollment');
-
   useEffect(() => {
+    console.log('CourseDetail useEffect triggered with courseId:', courseId, 'user:', user?.id);
     if (courseId) {
       loadCourse();
       if (user) {
@@ -104,60 +99,120 @@ const CourseDetail: React.FC = () => {
   const loadCourse = async () => {
     try {
       setLoading(true);
-      const result = await getCourse(courseId!);
+      console.log('Cargando curso con ID:', courseId);
       
-      if (result.data) {
-        setCourse(result.data);
-      } else {
-        // Mock data for development
-        const mockCourse: Course = {
-          id: courseId!,
-          title: 'Curso Demo',
-          description: 'Descripción breve',
-          long_description: 'Detalles de demostración',
-          instructor_name: 'Demo Instructor',
-          instructor_bio: '',
+      // Consulta directa a Supabase sin edge functions
+      const { data: courseData, error } = await supabase
+        .from('courses')
+        .select(`
+          *,
+          categories(name),
+          profiles:instructor_id(full_name, email)
+        `)
+        .eq('id', courseId!)
+        .single();
+
+      console.log('Resultado de la consulta:', { courseData, error });
+
+      if (error) {
+        console.error('Error loading course:', error);
+        
+        // Intentar consulta sin joins para verificar si el curso existe
+        const { data: basicCourse, error: basicError } = await supabase
+          .from('courses')
+          .select('*')
+          .eq('id', courseId!)
+          .single();
+          
+        console.log('Consulta básica:', { basicCourse, basicError });
+        
+        if (basicError) {
+          console.error('El curso no existe en la base de datos');
+          setCourse(null);
+          return;
+        }
+      }
+
+      if (courseData) {
+        console.log('Curso encontrado, transformando datos...');
+        // Transformar datos a la estructura esperada
+        const formattedCourse: Course = {
+          id: courseData.id,
+          title: courseData.title,
+          description: courseData.description || '',
+          long_description: courseData.description || '',
+          instructor_name: courseData.profiles?.full_name || 'Instructor',
+          instructor_bio: 'Instructor especializado en el tema',
           instructor_avatar: '/placeholder.svg',
-          category: 'General',
-          level: 'beginner',
-          subscription_tier: 'free',
-          duration_hours: 1,
-          total_lessons: 1,
-          total_students: 0,
-          rating: 5,
-          rating_count: 1,
-          thumbnail_url: '/placeholder.svg',
-          trailer_url: '',
-          features: ['Ejemplo'],
-          requirements: ['Ninguno'],
-          what_you_learn: ['Aprender'],
+          category: courseData.categories?.name || 'General',
+          level: courseData.level || 'beginner',
+          subscription_tier: 'free', // MODO DEMO: Todos los cursos son gratuitos
+          duration_hours: courseData.duration_hours || 1,
+          total_lessons: 5, // Placeholder
+          total_students: 150, // Placeholder
+          rating: 4.8,
+          rating_count: 42,
+          thumbnail_url: courseData.thumbnail_url || '/placeholder.svg',
+          intro_video_url: courseData.intro_video_url || '',
+          intro_video_type: courseData.intro_video_url?.includes('youtube') ? 'youtube' : 'upload',
+          features: [
+            'Contenido actualizado',
+            'Certificado de finalización',
+            'Acceso de por vida',
+            'Soporte del instructor'
+          ],
+          requirements: [
+            'Conocimientos básicos de informática',
+            'Ganas de aprender'
+          ],
+          what_you_learn: [
+            'Dominar los conceptos fundamentales',
+            'Aplicar conocimientos en proyectos reales',
+            'Resolver problemas complejos',
+            'Mejores prácticas del sector'
+          ],
           modules: [
             {
               id: '1',
-              title: 'Introducción',
-              description: '',
+              title: 'Introducción al Curso',
+              description: 'Conoce los objetivos y metodología',
               order_index: 1,
               lessons: [
                 {
                   id: '1',
-                  title: 'Lección demo',
-                  duration_minutes: 5,
+                  title: 'Bienvenida y objetivos',
+                  duration_minutes: 10,
                   order_index: 1,
                   is_free: true,
                   completed: false,
                   type: 'video',
                 },
+                {
+                  id: '2',
+                  title: 'Configuración del entorno',
+                  duration_minutes: 15,
+                  order_index: 2,
+                  is_free: false,
+                  completed: false,
+                  type: 'video',
+                }
               ],
-            },
+            }
           ],
-          created_at: '2024-01-01T00:00:00Z',
-          updated_at: '2024-01-01T00:00:00Z',
-          published: true,
+          created_at: courseData.created_at,
+          updated_at: courseData.updated_at || courseData.created_at,
+          published: courseData.is_published,
         };
-        setCourse(mockCourse);
+        
+        console.log('Curso formateado:', formattedCourse);
+        setCourse(formattedCourse);
+      } else {
+        console.log('No hay datos del curso');
+        setCourse(null);
       }
     } catch (error) {
       console.error('Error loading course:', error);
+      setCourse(null);
     } finally {
       setLoading(false);
     }
@@ -165,11 +220,35 @@ const CourseDetail: React.FC = () => {
 
   const checkEnrollment = async () => {
     try {
-      const result = await getEnrollment(courseId!);
-      console.log('Enrollment check result:', result);
-      
-      if (result.data && result.data.enrolled) {
-        setEnrollment(result.data.enrollment);
+      if (!user || !courseId) {
+        setEnrollment(null);
+        return;
+      }
+
+      // Consulta directa a Supabase para verificar inscripción
+      const { data: enrollmentData, error } = await supabase
+        .from('course_enrollments')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('course_id', courseId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+        console.error('Error checking enrollment:', error);
+        setEnrollment(null);
+        return;
+      }
+
+      if (enrollmentData) {
+        setEnrollment({
+          id: enrollmentData.id,
+          course_id: enrollmentData.course_id,
+          enrolled_at: enrollmentData.enrolled_at,
+          progress_percentage: enrollmentData.progress_percentage || 0,
+          last_accessed: enrollmentData.enrolled_at,
+          completed_at: enrollmentData.completed_at,
+          certificate_id: enrollmentData.certificate_id
+        });
       } else {
         setEnrollment(null);
       }
@@ -191,7 +270,7 @@ const CourseDetail: React.FC = () => {
       setIsEnrolling(true);
 
       // Inscripción directa en la base de datos sin Edge Functions
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('course_enrollments')
         .insert({
           user_id: user.id,
@@ -212,27 +291,25 @@ const CourseDetail: React.FC = () => {
           // Check enrollment status
           await checkEnrollment();
         } else {
-          throw error;
+          console.error('Enrollment error:', error);
+          toast({
+            title: "Error",
+            description: "No se pudo completar la inscripción",
+            variant: "destructive",
+          });
         }
       } else {
         toast({
           title: "¡Inscripción exitosa!",
-          description: `Te has inscrito exitosamente en "${course.title}"`,
+          description: "Te has inscrito correctamente al curso",
         });
-        
-        // Update enrollment state
-        setEnrollment({
-          id: data.id,
-          enrolled_at: data.enrolled_at,
-          progress_percentage: 0,
-          completed_at: null
-        });
+        await checkEnrollment();
       }
     } catch (error) {
-      console.error('Error enrolling in course:', error);
+      console.error('Error enrolling:', error);
       toast({
         title: "Error",
-        description: "Error al inscribirse en el curso. Inténtalo de nuevo.",
+        description: "Ocurrió un error durante la inscripción",
         variant: "destructive",
       });
     } finally {
@@ -240,58 +317,72 @@ const CourseDetail: React.FC = () => {
     }
   };
 
-  const canAccessCourse = (courseSubscriptionTier: string, userSubscriptionTier: string) => {
-    const tierHierarchy = { free: 0, basic: 1, premium: 2 };
-    return tierHierarchy[userSubscriptionTier as keyof typeof tierHierarchy] >= 
-           tierHierarchy[courseSubscriptionTier as keyof typeof tierHierarchy];
-  };
+  const startLearning = async () => {
+    if (!course) return;
 
-  const getSubscriptionTierColor = (tier: string) => {
-    switch (tier) {
-      case 'free':
-        return 'bg-gray-100 text-gray-800';
-      case 'basic':
-        return 'bg-blue-100 text-blue-800';
-      case 'premium':
-        return 'bg-purple-100 text-purple-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+    console.log('🚀 Starting learning for course:', course.id);
+    console.log('🔗 Course data:', {
+      id: course.id,
+      title: course.title,
+      modules: course.modules?.length || 0
+    });
+    
+    let firstLessonId: string | null = null;
+
+    // Revisar si el curso ya tiene módulos y lecciones cargadas
+    if (course.modules && course.modules.length > 0) {
+      const firstModule = course.modules[0];
+      if (firstModule && firstModule.lessons && firstModule.lessons.length > 0) {
+        firstLessonId = firstModule.lessons[0].id;
+        console.log('✅ Found first lesson from modules:', firstLessonId);
+      }
     }
-  };
 
-  const getSubscriptionTierText = (tier: string) => {
-    switch (tier) {
-      case 'free':
-        return 'Gratis';
-      case 'basic':
-        return 'Basic';
-      case 'premium':
-        return 'Premium';
-      default:
-        return tier;
+    // Si no se encontró la primera lección, consultarla directamente en Supabase
+    if (!firstLessonId) {
+      console.log('🔍 Searching for first lesson in database...');
+      const { data, error } = await supabase
+        .from('lessons')
+        .select('id, title, order_index')
+        .eq('course_id', course.id)
+        .order('order_index', { ascending: true })
+        .limit(1)
+        .single();
+
+      console.log('📖 Lesson query result:', { data, error });
+      firstLessonId = data?.id ?? null;
     }
-  };
 
-  const startLearning = () => {
-    if (!course || !course.modules || course.modules.length === 0) {
-      // Si no hay módulos, mostrar el curriculum
-      setActiveTab('curriculum');
+    if (firstLessonId) {
+      const targetUrl = `/courses/${course.id}/lesson/${firstLessonId}`;
+      console.log('✅ Navigating to lesson:', firstLessonId);
+      console.log('🎯 Target URL:', targetUrl);
+      console.log('📍 Current URL before navigation:', window.location.href);
+      
+      // Mostrar toast informativo
+      toast({
+        title: "Navegando a la lección",
+        description: `Redirigiendo a la primera lección del curso`,
+        duration: 2000,
+      });
+      
+      navigate(targetUrl);
+      
+      // Log después de la navegación (puede no ejecutarse si hay redirección)
       setTimeout(() => {
-        const contentSection = document.getElementById('course-content');
-        if (contentSection) {
-          contentSection.scrollIntoView({ behavior: 'smooth' });
-        }
+        console.log('📍 Current URL after navigation:', window.location.href);
       }, 100);
-      return;
-    }
-
-    // Buscar la primera lección del primer módulo
-    const firstModule = course.modules[0];
-    if (firstModule && firstModule.lessons && firstModule.lessons.length > 0) {
-      const firstLesson = firstModule.lessons[0];
-      // Navegar directamente a la primera lección
-      navigate(`/courses/${course.id}/lesson/${firstLesson.id}`);
     } else {
+      console.log('❌ No lessons found, showing curriculum');
+      
+      // Mostrar toast informativo
+      toast({
+        title: "No hay lecciones disponibles",
+        description: "Este curso aún no tiene lecciones. Puedes ver el contenido en la pestaña Contenido.",
+        duration: 4000,
+        variant: "destructive"
+      });
+      
       // Si no hay lecciones, mostrar el curriculum
       setActiveTab('curriculum');
       setTimeout(() => {
@@ -336,14 +427,8 @@ const CourseDetail: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando curso...</p>
-        </div>
-      </div>
-    );
+    // MODO DEMO: Quitar loading para pruebas rápidas
+    return null;
   }
 
   if (!course) {
@@ -354,9 +439,18 @@ const CourseDetail: React.FC = () => {
             <BookOpen className="h-16 w-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">Curso no encontrado</h3>
             <p className="text-gray-600 mb-4">El curso solicitado no existe o no está disponible.</p>
-            <Button onClick={() => navigate('/courses')}>
-              Ver Todos los Cursos
-            </Button>
+            <div className="text-sm text-gray-500 mb-4 p-2 bg-gray-100 rounded">
+              <p><strong>ID del curso:</strong> {courseId}</p>
+              <p>Verifica la consola del navegador para más detalles.</p>
+            </div>
+            <div className="space-y-2">
+              <Button onClick={() => navigate('/courses')} className="w-full">
+                Ver Todos los Cursos
+              </Button>
+              <Button onClick={() => navigate('/dashboard')} variant="outline" className="w-full">
+                Ir al Dashboard
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -411,18 +505,11 @@ const CourseDetail: React.FC = () => {
             <div className="lg:col-span-1">
               <Card className="bg-white">
                 <CardContent className="p-6">
-                  <div className="aspect-video bg-gray-200 rounded-lg mb-4 flex items-center justify-center">
-                    {course.trailer_url ? (
-                      <iframe
-                        src={course.trailer_url}
-                        title={`Tráiler del curso: ${course.title}`}
-                        className="w-full h-full rounded-lg"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      />
-                    ) : (
-                      <Play className="h-16 w-16 text-gray-400" />
-                    )}
+                  <div className="mb-4">
+                    <CourseVideoPreview 
+                      videoUrl={course.intro_video_url}
+                      courseName={course.title}
+                    />
                   </div>
 
                   {enrollment ? (
@@ -440,7 +527,17 @@ const CourseDetail: React.FC = () => {
                         className="w-full"
                         size="lg"
                       >
-                        {enrollment.progress_percentage > 0 ? 'Continuar Aprendiendo' : 'Comenzar Curso'}
+                        Continuar Curso
+                      </Button>
+                      
+                      <Button 
+                        onClick={() => navigate(`/exam/${course.id}`)}
+                        variant="outline"  
+                        className="w-full"
+                        size="lg"
+                      >
+                        <BookOpen className="h-4 w-4 mr-2" />
+                        Tomar Examen Final
                       </Button>
                       
                       {enrollment.certificate_id && (
@@ -454,17 +551,11 @@ const CourseDetail: React.FC = () => {
                     <div className="space-y-4">
                       <div className="text-center">
                         <div className="mb-3">
-                          <Badge className={getSubscriptionTierColor(course.subscription_tier)}>
-                            {getSubscriptionTierText(course.subscription_tier)}
+                          <Badge className="bg-green-100 text-green-800">
+                            Acceso Libre
                           </Badge>
                         </div>
-                        {course.subscription_tier === 'free' ? (
-                          <p className="text-green-600 font-medium">¡Curso totalmente gratuito!</p>
-                        ) : (
-                          <p className="text-gray-600">
-                            Requiere suscripción {getSubscriptionTierText(course.subscription_tier)}
-                          </p>
-                        )}
+                        <p className="text-green-600 font-medium">¡Curso disponible!</p>
                       </div>
 
                       <Button 
@@ -473,12 +564,17 @@ const CourseDetail: React.FC = () => {
                         className="w-full"
                         size="lg"
                       >
-                        {(() => {
-                          if (isEnrolling) return 'Procesando...';
-                          if (course.subscription_tier === 'free') return 'Inscribirse Gratis';
-                          if (hasActiveSubscription) return 'Acceder al Curso';
-                          return 'Suscribirse para Acceder';
-                        })()}
+                        {isEnrolling ? 'Procesando...' : 'Inscribirse al Curso'}
+                      </Button>
+
+                      <Button 
+                        onClick={() => navigate(`/exam/${course.id}`)}
+                        variant="outline"  
+                        className="w-full"
+                        size="lg"
+                      >
+                        <BookOpen className="h-4 w-4 mr-2" />
+                        Tomar Examen Final
                       </Button>
 
                       <div className="text-xs text-gray-500 text-center">
@@ -661,7 +757,7 @@ const CourseDetail: React.FC = () => {
                                   <Button 
                                     variant="ghost" 
                                     size="sm"
-                                    onClick={() => navigate(`/lesson/${lesson.id}`)}
+                                    onClick={() => navigate(`/courses/${course.id}/lesson/${lesson.id}`)}
                                   >
                                     <ChevronRight className="h-4 w-4" />
                                   </Button>

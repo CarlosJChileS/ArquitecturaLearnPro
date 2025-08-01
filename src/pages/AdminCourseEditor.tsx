@@ -12,39 +12,38 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { prepareCourseDataForDB, handleUUIDError } from "@/lib/uuid-utils";
+import { CategorySelector } from "@/components/ui/CategorySelector";
+import { supabase } from "@/integrations/supabase/client";
 
-// Interfaces mejoradas
-interface Lesson {
-  id: string;
-  title: string;
-  description: string;
-  duration_minutes: number;
-  type: 'video' | 'text' | 'quiz' | 'assignment' | 'live_session';
-  video_url?: string;
-  video_file?: File;
-  content?: string;
-  is_free: boolean;
-  order_index: number;
-  resources: Resource[];
-  quiz_questions?: QuizQuestion[];
-  assignments?: Assignment[];
-  completed_by_students?: number;
-  avg_rating?: number;
-}
-
-interface Resource {
+// Interfaces compatibles con la estructura real de la BD
+interface Course {
   id: string;
   title: string;
   description?: string;
-  type: 'pdf' | 'link' | 'file' | 'video' | 'image';
-  url?: string;
-  file?: File;
-  size?: number;
-  downloadable: boolean;
+  thumbnail_url?: string;
+  price?: number;
+  instructor_id?: string;
+  category_id?: string;
+  level: string; // 'beginner' | 'intermediate' | 'advanced'
+  duration_hours?: number;
+  is_published: boolean;
+  created_at: string;
+  updated_at?: string;
 }
 
-interface QuizQuestion {
+interface Lesson {
   id: string;
+  course_id: string;
+  title: string;
+  description?: string;
+  video_url?: string;
+  duration_minutes: number;
+  order_index: number;
+  is_free: boolean;
+  created_at: string;
+  updated_at?: string;
+}
   question: string;
   type: 'multiple_choice' | 'true_false' | 'short_answer' | 'essay';
   options?: string[];
@@ -114,14 +113,13 @@ interface CourseData {
   // Media
   thumbnail_url: string;
   thumbnail_file?: File;
-  trailer_url: string;
-  trailer_file?: File;
+  intro_video_url: string;
+  intro_video_type: 'upload' | 'youtube';
   course_images: string[];
-  image_files?: File[];
   
   // Configuración
-  instructor_id: string;
-  category: string;
+  instructor_id: string | null;
+  category_id: string | null; // UUID de la categoría
   subcategory?: string;
   level: 'beginner' | 'intermediate' | 'advanced';
   subscription_tier: 'free' | 'basic' | 'premium';
@@ -234,6 +232,7 @@ const AdminCourseEditor = () => {
 
   const [currentStep, setCurrentStep] = useState(0);
   const [previewMode, setPreviewMode] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const [courseData, setCourseData] = useState<CourseData>({
     // Información básica
@@ -244,7 +243,8 @@ const AdminCourseEditor = () => {
     
     // Media
     thumbnail_url: "",
-    trailer_url: "",
+    intro_video_url: "",
+    intro_video_type: 'upload' as 'upload' | 'youtube',
     course_images: [],
 
     // Texto por secciones
@@ -254,8 +254,8 @@ const AdminCourseEditor = () => {
     final_exam: undefined,
     
     // Configuración
-    instructor_id: user?.id || "",
-    category: "",
+    instructor_id: user?.id || null,
+    category_id: null, // Se seleccionará con el selector
     subcategory: "",
     level: "beginner",
     subscription_tier: "basic",
@@ -332,7 +332,8 @@ const AdminCourseEditor = () => {
         
         // Media
         thumbnail_url: "/placeholder.svg",
-        trailer_url: "",
+        intro_video_url: "",
+        intro_video_type: 'upload' as 'upload' | 'youtube',
         course_images: [],
 
         // Texto por secciones
@@ -342,8 +343,8 @@ const AdminCourseEditor = () => {
         final_exam: undefined,
         
         // Configuración
-        instructor_id: user?.id || "",
-        category: "Desarrollo Web",
+        instructor_id: user?.id || null,
+        category_id: null, // Se asignará con el selector
         subcategory: "Full Stack",
         level: "intermediate",
         subscription_tier: "premium",
@@ -411,16 +412,28 @@ const AdminCourseEditor = () => {
   };
 
   const handleSave = async () => {
-    if (!courseData.title || !courseData.description || !courseData.category) {
+    if (!courseData.title || !courseData.description) {
       toast({
         title: "Error",
-        description: "Por favor completa todos los campos obligatorios",
+        description: "Por favor completa el título y descripción del curso",
         variant: "destructive"
       });
       return;
     }
 
     try {
+      setSaving(true);
+      
+      // Preparar datos limpios para la base de datos
+      const cleanedData = prepareCourseDataForDB(courseData);
+      
+      // TODO: Implementar llamada real a Supabase
+      // const { data, error } = await supabase
+      //   .from('courses')
+      //   .insert(cleanedData);
+      
+      console.log("Datos preparados para guardar:", cleanedData);
+      
       toast({
         title: isEdit ? "Curso actualizado" : "Curso creado",
         description: `El curso "${courseData.title}" ha sido ${isEdit ? "actualizado" : "creado"} exitosamente.`
@@ -428,11 +441,14 @@ const AdminCourseEditor = () => {
       navigate("/admin");
     } catch (error) {
       console.error("Error saving course:", error);
+      const userFriendlyMessage = handleUUIDError(error);
       toast({
         title: "Error",
-        description: "Error al guardar el curso",
+        description: userFriendlyMessage,
         variant: "destructive"
       });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -495,7 +511,7 @@ const AdminCourseEditor = () => {
   };
 
   const calculateProgress = () => {
-    const requiredFields = ['title', 'description', 'category', 'level'];
+    const requiredFields = ['title', 'description', 'category_id', 'level'];
     const completedFields = requiredFields.filter(field => courseData[field as keyof CourseData]);
     return (completedFields.length / requiredFields.length) * 100;
   };
@@ -748,22 +764,13 @@ const AdminCourseEditor = () => {
                         />
                       </div>
                       
-                      <div className="space-y-2">
-                        <Label htmlFor="category">Categoría *</Label>
-                        <Select 
-                          value={courseData.category} 
-                          onValueChange={(value) => setCourseData({...courseData, category: value})}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecciona una categoría" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {CATEGORIES.map((cat) => (
-                              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      <CategorySelector
+                        value={courseData.category_id}
+                        onValueChange={(categoryId) => setCourseData({...courseData, category_id: categoryId})}
+                        required={true}
+                        label="Categoría *"
+                        placeholder="Selecciona una categoría"
+                      />
                     </div>
 
                     <div className="space-y-2">
@@ -904,15 +911,15 @@ const AdminCourseEditor = () => {
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="trailer">URL del Video de Presentación</Label>
-                      <Input
-                        id="trailer"
-                        value={courseData.trailer_url}
-                        onChange={(e) => setCourseData({...courseData, trailer_url: e.target.value})}
-                        placeholder="https://..."
-                      />
-                    </div>
+                    <VideoUploader
+                      value={courseData.intro_video_url}
+                      videoType={courseData.intro_video_type}
+                      onChange={(url, type) => setCourseData({...courseData, intro_video_url: url, intro_video_type: type})}
+                      onRemove={() => setCourseData({...courseData, intro_video_url: '', intro_video_type: 'upload'})}
+                      label="Video Introductorio del Curso"
+                      bucket="course-videos"
+                      folder="intros"
+                    />
                   </CardContent>
                 </Card>
               )}

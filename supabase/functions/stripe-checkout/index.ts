@@ -51,9 +51,9 @@ serve(async (req) => {
 
     logStep("User authenticated", { userId: user.id, email: user.email });
 
-    const { planType = 'monthly', priceId } = await req.json();
+    const { planType = 'monthly', planName, priceId, mode = 'hosted' } = await req.json();
 
-    logStep("Request data received", { planType, priceId });
+    logStep("Request data received", { planType, planName, priceId, mode });
 
     const stripe = new Stripe(stripeKey, {
       apiVersion: "2023-10-16"
@@ -73,24 +73,36 @@ serve(async (req) => {
       logStep("No existing customer found");
     }
 
-    // Define subscription plans
-    const plans = {
-      monthly: {
-        price: 1599, // $15.99
-        name: "Plan Mensual LearnPro"
-      },
-      annual: {
-        price: 15990, // $159.90
-        name: "Plan Anual LearnPro"
-      }
-    };
+    // Get dynamic pricing from subscription_plans table
+    const { data: subscriptionPlans, error: plansError } = await supabaseClient
+      .from('subscription_plans')
+      .select('*');
 
-    const selectedPlan = plans[planType as keyof typeof plans];
-    if (!selectedPlan) {
-      throw new Error("Invalid plan type");
+    if (plansError) {
+      throw new Error(`Error fetching subscription plans: ${plansError.message}`);
     }
 
-    logStep("Plan selected", selectedPlan);
+    logStep("Subscription plans fetched", { count: subscriptionPlans?.length });
+
+    // Find the plan based on planName or duration
+    let selectedPlan;
+    if (planName) {
+      selectedPlan = subscriptionPlans?.find(p => p.name === planName);
+    } else {
+      // Fallback to duration-based selection
+      const duration = planType === 'monthly' ? 1 : 12;
+      selectedPlan = subscriptionPlans?.find(p => p.duration_months === duration);
+    }
+
+    if (!selectedPlan) {
+      throw new Error(`Plan not found: ${planName || planType}`);
+    }
+
+    logStep("Plan selected from database", { 
+      name: selectedPlan.name, 
+      price: selectedPlan.price, 
+      duration: selectedPlan.duration_months 
+    });
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -100,11 +112,11 @@ serve(async (req) => {
           currency: "usd",
           product_data: {
             name: selectedPlan.name,
-            description: `Acceso completo a todos los cursos de LearnPro - ${planType === 'monthly' ? 'Mensual' : 'Anual'}`
+            description: selectedPlan.description || `Acceso completo a todos los cursos de LearnPro - ${selectedPlan.name}`
           },
-          unit_amount: selectedPlan.price,
+          unit_amount: Math.round(selectedPlan.price * 100), // Convert to cents
           recurring: {
-            interval: planType === 'monthly' ? 'month' : 'year'
+            interval: selectedPlan.duration_months === 1 ? 'month' : 'year'
           }
         },
         quantity: 1
@@ -112,18 +124,37 @@ serve(async (req) => {
       mode: "subscription",
       success_url: `${req.headers.get("origin")}/dashboard?success=true`,
       cancel_url: `${req.headers.get("origin")}/pricing?canceled=true`,
+      ui_mode: mode === 'embedded' ? 'embedded' : 'hosted',
+      return_url: mode === 'embedded' ? `${req.headers.get("origin")}/dashboard?success=true` : undefined,
       metadata: {
         user_id: user.id,
-        plan_type: planType
+        plan_type: planType,
+        plan_name: selectedPlan.name,
+        plan_id: selectedPlan.id
       }
     });
 
-    logStep("Checkout session created", { sessionId: session.id, url: session.url });
-
-    return new Response(JSON.stringify({ url: session.url }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200
+    logStep("Checkout session created", { 
+      sessionId: session.id, 
+      url: session.url,
+      mode: mode || 'hosted'
     });
+
+    // Return different response based on mode
+    if (mode === 'embedded') {
+      return new Response(JSON.stringify({ 
+        sessionId: session.id,
+        clientSecret: session.client_secret
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200
+      });
+    } else {
+      return new Response(JSON.stringify({ url: session.url }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200
+      });
+    }
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);

@@ -3,8 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Check, Star, Zap, Crown } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Check, Star, Zap } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useToast } from "@/hooks/use-toast";
@@ -67,7 +66,7 @@ const PricingPlans = () => {
       }))
     : fallbackPlans;
 
-  const handleSubscribe = async (planName: string) => {
+  const handlePayPal = async (planName: string) => {
     if (!user) {
       toast({
         title: "Inicia sesión requerido",
@@ -77,40 +76,9 @@ const PricingPlans = () => {
       return;
     }
 
-    try {
-      const planType = isAnnual ? 'annual' : 'monthly';
-      const { url, error } = await createCheckoutSession(planType, planName);
-      
-      if (error) {
-        toast({
-          title: "Error",
-          description: error,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (url) {
-        window.open(url, '_blank');
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Error al procesar la suscripción. Inténtalo de nuevo.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handlePayPal = async (amount: number) => {
-    if (!user) {
-      toast({
-        title: "Inicia sesión requerido",
-        description: "Debes iniciar sesión para suscribirte a un plan.",
-        variant: "destructive",
-      });
-      return;
-    }
+    const planType = isAnnual ? 'annual' : 'monthly';
+    const selectedPlan = plans.find(p => p.name === planName);
+    const amount = isAnnual ? selectedPlan?.annualPrice : selectedPlan?.monthlyPrice;
 
     try {
       const { data, error } = await supabase.functions.invoke('paypal-payment', {
@@ -133,6 +101,37 @@ const PricingPlans = () => {
       toast({
         title: 'Error',
         description: 'Error al procesar el pago con PayPal.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleStripe = async (planName: string) => {
+    if (!user) {
+      toast({
+        title: "Inicia sesión requerido",
+        description: "Debes iniciar sesión para suscribirte a un plan.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const planType = isAnnual ? 'annual' : 'monthly';
+      const result = await createCheckoutSession(planType, planName, 'hosted');
+      
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      
+      // Redirigir a Stripe en nueva pestaña
+      if (result.url) {
+        window.open(result.url, '_blank');
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Error al procesar el pago con Stripe.',
         variant: 'destructive',
       });
     }
@@ -172,7 +171,7 @@ const PricingPlans = () => {
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
             Elige el plan que mejor se adapte a tus necesidades de aprendizaje
-          </p>
+              </p>
           
           {/* Billing Toggle */}
           <div className="flex items-center justify-center space-x-4 mb-8">
@@ -277,7 +276,7 @@ const PricingPlans = () => {
                             : 'bg-primary hover:bg-primary/90'
                         }`}
                         size="lg"
-                        onClick={() => handleSubscribe(plan.name)}
+                        onClick={() => handleStripe(plan.name)}
                         disabled={loading}
                       >
                         {loading ? 'Procesando...' : user ? 'Pagar con Stripe' : 'Iniciar Sesión'}
@@ -285,7 +284,7 @@ const PricingPlans = () => {
                       <Button
                         variant="outline"
                         className="w-full"
-                        onClick={() => handlePayPal(currentPrice)}
+                        onClick={() => handlePayPal(plan.name)}
                         disabled={loading}
                       >
                         {loading ? 'Procesando...' : 'Pagar con PayPal'}

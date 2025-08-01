@@ -1,329 +1,334 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
+import { useStudentProgress } from '@/hooks/useSubscription';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { BookOpen, Clock, Trophy, Users, Play } from 'lucide-react';
+import { BookOpen, Clock, Trophy, Play, Star, Award, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/lib/supabase-mvp';
-
-interface CourseProgress {
-  course_id: string;
-  user_id: string;
-  progress: number;
-  completed: boolean;
-  last_accessed: string;
-  lessons_completed: number;
-  total_lessons: number;
-}
-
-interface EnrolledCourse {
-  id: string;
-  title: string;
-  description: string;
-  image_url: string;
-  instructor_name: string;
-  duration_hours: number;
-  level: string;
-  category: string;
-  price: number;
-  progress?: CourseProgress;
-}
-
-interface DashboardStats {
-  totalCourses: number;
-  completedCourses: number;
-  totalHours: number;
-  certificates: number;
-}
 
 const StudentDashboard: React.FC = () => {
-  const { user, profile } = useAuth();
-  const { subscription } = useSubscription();
-  const hasActiveSubscription =
-    subscription.subscribed &&
-    subscription.subscription_end &&
-    new Date(subscription.subscription_end) > new Date();
+  const { user } = useAuth();
+  const { subscription, loading: subLoading } = useSubscription();
   const navigate = useNavigate();
-  const [enrolledCourses, setEnrolledCourses] = useState<EnrolledCourse[]>([]);
-  const [stats, setStats] = useState<DashboardStats>({
-    totalCourses: 0,
-    completedCourses: 0,
-    totalHours: 0,
-    certificates: 0
-  });
 
-  useEffect(() => {
-    if (user) {
-      loadDashboardData();
-    }
-  }, [user]);
-
-  // Recargar datos cuando el componente se monta (útil para actualizaciones)
-  useEffect(() => {
-    const handleFocus = () => {
-      if (user) {
-        loadDashboardData();
+  // MODO DEMO: Datos mock para pruebas
+  const mockProgress = {
+    total_courses: 3,
+    completed_courses: 1,
+    total_hours_studied: 15,
+    certificates_earned: 1,
+    current_streak: 7,
+    enrolled_courses: [
+      {
+        id: 'course-1',
+        title: 'Introducción a React',
+        progress_percentage: 75,
+        thumbnail_url: '/placeholder.svg',
+        instructor_name: 'María García',
+        last_accessed: new Date().toISOString(),
+        duration_hours: 8
+      },
+      {
+        id: 'course-2', 
+        title: 'JavaScript Avanzado',
+        progress_percentage: 30,
+        thumbnail_url: '/placeholder.svg',
+        instructor_name: 'Carlos López',
+        last_accessed: new Date().toISOString(),
+        duration_hours: 12
+      },
+      {
+        id: 'course-3',
+        title: 'Diseño UX/UI',
+        progress_percentage: 100,
+        thumbnail_url: '/placeholder.svg',
+        instructor_name: 'Ana Martínez',
+        last_accessed: new Date().toISOString(),
+        duration_hours: 6
       }
-    };
-
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [user]);
-
-  const loadDashboardData = async () => {
-    try {
-      if (!user) return;
-
-      // Load enrolled courses with direct Supabase query
-      const { data: enrollments, error: enrollmentsError } = await supabase
-        .from('course_enrollments')
-        .select(`
-          *,
-          courses (
-            id,
-            title,
-            description,
-            thumbnail_url,
-            duration_hours,
-            level,
-            price,
-            categories (name),
-            profiles:instructor_id (full_name)
-          )
-        `)
-        .eq('user_id', user.id)
-        .order('enrolled_at', { ascending: false });
-
-      if (enrollmentsError) {
-        console.error('Error loading enrollments:', enrollmentsError);
-      } else if (enrollments) {
-        const coursesWithProgress = enrollments.map(enrollment => ({
-          id: enrollment.courses.id,
-          title: enrollment.courses.title,
-          description: enrollment.courses.description,
-          image_url: enrollment.courses.thumbnail_url,
-          instructor_name: enrollment.courses.profiles?.full_name || 'Instructor',
-          duration_hours: enrollment.courses.duration_hours || 0,
-          level: enrollment.courses.level || 'beginner',
-          category: enrollment.courses.categories?.name || 'General',
-          price: enrollment.courses.price || 0,
-          progress: {
-            course_id: enrollment.course_id,
-            user_id: enrollment.user_id,
-            progress: enrollment.progress_percentage || 0,
-            completed: enrollment.completed_at !== null,
-            last_accessed: enrollment.enrolled_at,
-            lessons_completed: 0,
-            total_lessons: 1
-          }
-        }));
-        
-        setEnrolledCourses(coursesWithProgress);
-        
-        // Calculate stats
-        const totalCourses = enrollments.length;
-        const completedCourses = enrollments.filter(e => e.completed_at).length;
-        const totalHours = enrollments.reduce((sum, e) => sum + (e.courses.duration_hours || 0), 0);
-        
-        setStats({
-          totalCourses,
-          completedCourses,
-          totalHours,
-          certificates: completedCourses
-        });
-      }
-    } catch (error) {
-      console.error('Error loading dashboard data:', error);
-    }
+    ]
   };
 
-  const getProgressText = (progress: number) => {
-    if (progress >= 100) return 'Completado';
-    if (progress >= 75) return 'Casi terminado';
-    if (progress >= 50) return 'En progreso';
-    if (progress > 0) return 'Iniciado';
-    return 'No iniciado';
+  const hasActiveSubscription = subscription.subscribed && 
+    subscription.subscription_tier !== 'free';
+
+  // MODO DEMO: Sin loading states
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('es-ES', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  const getSubscriptionBadge = () => {
+    return <Badge className="bg-green-500">Demo Mode</Badge>;
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Bienvenido, {profile?.full_name || user?.email}
-        </h1>
-        <p className="text-gray-600">
-          Continúa tu aprendizaje y alcanza tus objetivos
-        </p>
-        {!hasActiveSubscription && (
-          <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-yellow-800">
-              Tu suscripción ha expirado. 
-              <Button 
-                variant="link" 
-                className="text-yellow-800 underline p-0 ml-1"
-                onClick={() => navigate('/subscription')}
-              >
-                Renueva tu suscripción
-              </Button> 
-              para seguir accediendo a todos los cursos.
-            </p>
-          </div>
-        )}
+    <div className="container mx-auto p-6 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Mi Dashboard</h1>
+          <p className="text-muted-foreground">
+            Bienvenido de nuevo, {user?.email?.split('@')[0] || 'Estudiante'}
+          </p>
+        </div>
+        <div className="flex items-center space-x-2 mt-4 md:mt-0">
+          {getSubscriptionBadge()}
+          {subscription.subscription_end && (
+            <Badge variant="outline">
+              Expira: {formatDate(subscription.subscription_end)}
+            </Badge>
+          )}
+        </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Cursos Inscritos</CardTitle>
+            <CardTitle className="text-sm font-medium">Cursos Totales</CardTitle>
             <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalCourses}</div>
+            <div className="text-2xl font-bold">{progress.overview.totalCourses}</div>
+            <p className="text-xs text-muted-foreground">
+              {progress.overview.inProgressCourses} en progreso
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Cursos Completados</CardTitle>
+            <CardTitle className="text-sm font-medium">Completados</CardTitle>
             <Trophy className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.completedCourses}</div>
+            <div className="text-2xl font-bold">{progress.overview.completedCourses}</div>
+            <p className="text-xs text-muted-foreground">
+              {progress.overview.completionRate.toFixed(1)}% tasa de éxito
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Horas de Estudio</CardTitle>
+            <CardTitle className="text-sm font-medium">Tiempo Invertido</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalHours}</div>
+            <div className="text-2xl font-bold">
+              {progress.overview.totalWatchTimeHours.toFixed(1)}h
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {progress.overview.totalLessons} lecciones completadas
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Certificados</CardTitle>
-            <Trophy className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Logros</CardTitle>
+            <Award className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.certificates}</div>
+            <div className="text-2xl font-bold">{mockProgress.certificates_earned}</div>
+            <p className="text-xs text-muted-foreground">
+              Insignias desbloqueadas
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Enrolled Courses */}
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-gray-900">Mis Cursos</h2>
-          <Button onClick={() => navigate('/courses')}>
-            Explorar Más Cursos
-          </Button>
-        </div>
-
-        {enrolledCourses.length === 0 ? (
-          <Card className="text-center py-12">
-            <CardContent>
-              <BookOpen className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                No tienes cursos inscritos
-              </h3>
-              <p className="text-gray-600 mb-4">
-                Explora nuestro catálogo y comienza tu aprendizaje
+      {/* Current Enrollments */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <TrendingUp className="h-5 w-5" />
+            <span>Mis Cursos</span>
+          </CardTitle>
+          <CardDescription>
+            Continúa donde lo dejaste
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {mockProgress.enrolled_courses.length === 0 ? (
+            <div className="text-center py-8">
+              <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">No hay cursos matriculados</h3>
+              <p className="text-muted-foreground mb-4">
+                Explora nuestro catálogo y comienza tu viaje de aprendizaje
               </p>
               <Button onClick={() => navigate('/courses')}>
                 Explorar Cursos
               </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {enrolledCourses.map((course) => (
-              <Card key={course.id} className="hover:shadow-lg transition-shadow">
-                <div className="relative">
-                  <img
-                    src={course.image_url || '/placeholder.svg'}
-                    alt={course.title}
-                    className="w-full h-48 object-cover rounded-t-lg"
-                  />
-                  <Badge 
-                    variant="secondary" 
-                    className="absolute top-2 right-2"
-                  >
-                    {course.level}
-                  </Badge>
-                </div>
-                
-                <CardHeader>
-                  <CardTitle className="line-clamp-2">{course.title}</CardTitle>
-                  <CardDescription className="line-clamp-2">
-                    {course.description}
-                  </CardDescription>
-                </CardHeader>
-                
-                <CardContent className="space-y-4">
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Users className="h-4 w-4 mr-1" />
-                    {course.instructor_name}
-                  </div>
-                  
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Clock className="h-4 w-4 mr-1" />
-                    {course.duration_hours} horas
-                  </div>
-
-                  {course.progress && (
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>Progreso</span>
-                        <span>{Math.round(course.progress.progress)}%</span>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {mockProgress.enrolled_courses.map((enrollment) => (
+                <div key={enrollment.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h4 className="font-medium text-lg mb-1">{enrollment.title}</h4>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Instructor: {enrollment.instructor_name}
+                      </p>
+                      
+                      <div className="flex items-center space-x-4 mb-3">
+                        <Badge variant={enrollment.progress_percentage === 100 ? 'default' : 'secondary'}>
+                          {enrollment.progress_percentage === 100 ? 'Completado' : 'En Progreso'}
+                        </Badge>
+                        <span className="text-sm text-muted-foreground">
+                          Última visita: {formatDate(enrollment.last_accessed)}
+                        </span>
                       </div>
-                      <Progress 
-                        value={course.progress.progress} 
-                        className="h-2"
-                      />
-                      <div className="flex justify-between text-xs text-gray-600">
-                        <span>
-                          {course.progress.lessons_completed} de {course.progress.total_lessons} lecciones
-                        </span>
-                        <span className={`font-medium ${
-                          course.progress.progress >= 100 ? 'text-green-600' : 'text-blue-600'
-                        }`}>
-                          {getProgressText(course.progress.progress)}
-                        </span>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span>Progreso</span>
+                          <span className="font-medium">{enrollment.progress_percentage}%</span>
+                        </div>
+                        <Progress value={enrollment.progress_percentage} className="h-2" />
                       </div>
                     </div>
-                  )}
 
-                  <div className="flex gap-2">
-                    <Button 
-                      className="flex-1"
-                      onClick={() => navigate(`/courses/${course.id}`)}
-                    >
-                      <Play className="h-4 w-4 mr-2" />
-                      {course.progress?.progress ? 'Continuar' : 'Comenzar'}
-                    </Button>
-                    
-                    {course.progress?.completed && (
-                      <Button
-                        variant="outline"
-                        onClick={() => navigate(`/certificate/${course.id}`)}
+                    <div className="ml-4">
+                      <img 
+                        src={enrollment.thumbnail_url} 
+                        alt={enrollment.title}
+                        className="w-20 h-20 object-cover rounded-lg"
+                      />
+                      <Button 
+                        size="sm" 
+                        className="w-20 mt-2"
+                        onClick={() => navigate(`/course/${enrollment.id}`)}
                       >
-                        <Trophy className="h-4 w-4" />
+                        <Play className="h-4 w-4 mr-1" />
+                        Ver
                       </Button>
-                    )}
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Recent Activity */}
+      {progress.recentActivity.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Clock className="h-5 w-5" />
+              <span>Actividad Reciente</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {progress.recentActivity.slice(0, 5).map((activity, index) => (
+                <div key={index} className="flex items-center space-x-3 p-3 bg-muted rounded-lg">
+                  <div className={`p-2 rounded-full ${activity.completed ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>
+                    {activity.completed ? <Trophy className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium">{activity.lessonTitle}</p>
+                    <p className="text-sm text-muted-foreground">{activity.courseTitle}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium">{activity.progress}%</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDate(activity.timestamp)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Achievements */}
+      {progress.achievements.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Award className="h-5 w-5" />
+              <span>Logros Desbloqueados</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {progress.achievements.map((achievement, index) => (
+                <div key={index} className="flex items-center space-x-3 p-3 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
+                  <div className="p-2 rounded-full bg-yellow-100 text-yellow-600">
+                    <Star className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="font-medium">{achievement.name}</p>
+                    <p className="text-sm text-muted-foreground">{achievement.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Recommendations */}
+      {progress.recommendations.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <BookOpen className="h-5 w-5" />
+              <span>Recomendaciones para Ti</span>
+            </CardTitle>
+            <CardDescription>
+              Cursos seleccionados basados en tu progreso
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {progress.recommendations.slice(0, 4).map((rec) => (
+                <div key={rec.courseId} className="border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                     onClick={() => navigate(`/course/${rec.courseId}`)}>
+                  <h4 className="font-medium mb-1">{rec.title}</h4>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Instructor: {rec.instructor}
+                  </p>
+                  <p className="text-sm text-blue-600">
+                    {rec.reason}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {!hasActiveSubscription && (
+        <Card className="border-orange-200 bg-orange-50">
+          <CardHeader>
+            <CardTitle className="text-orange-800">Desbloquea Todo el Contenido</CardTitle>
+            <CardDescription className="text-orange-700">
+              Obtén acceso ilimitado a todos los cursos premium con una suscripción
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={() => navigate('/subscription')}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              Ver Planes de Suscripción
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

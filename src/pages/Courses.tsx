@@ -41,10 +41,8 @@ interface CourseFilters {
 const CoursesPage: React.FC = () => {
   const { user } = useAuth();
   const { subscription } = useSubscription();
-  const hasActiveSubscription =
-    subscription.subscribed &&
-    subscription.subscription_end &&
-    new Date(subscription.subscription_end) > new Date();
+  const hasActiveSubscription = subscription.subscribed && 
+    subscription.subscription_tier !== 'free';
   const navigate = useNavigate();
   const { toast } = useToast();
   const [courses, setCourses] = useState<Course[]>([]);

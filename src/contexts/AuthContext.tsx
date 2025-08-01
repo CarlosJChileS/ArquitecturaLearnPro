@@ -45,11 +45,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchProfile = async (userId: string) => {
     try {
-      const { data, error } = await supabase
+      // Primero intentar con user_id, luego con id como fallback
+      let { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
         .single();
+
+      // Si no encontramos por user_id, intentar por id
+      if (error && error.code === 'PGRST116') {
+        const { data: dataById, error: errorById } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single();
+        
+        data = dataById;
+        error = errorById;
+      }
 
       if (error) {
         console.error('Error fetching profile:', error);
@@ -159,10 +172,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user) return { error: 'No user logged in' };
 
-    const { error } = await supabase
+    // Intentar actualizar por user_id primero, luego por id
+    let { error } = await supabase
       .from('profiles')
       .update(updates)
       .eq('user_id', user.id);
+
+    // Si falla por user_id, intentar por id
+    if (error) {
+      const { error: errorById } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', user.id);
+      error = errorById;
+    }
 
     if (!error) {
       await refreshProfile();

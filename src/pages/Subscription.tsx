@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PricingPlans from "@/components/PricingPlans";
+import { useAuth } from '@/contexts/AuthContext';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -84,6 +86,8 @@ const featuredCourses = [
 
 const Subscription = () => {
   const [hoveredBenefit, setHoveredBenefit] = useState<number | null>(null);
+  const { user } = useAuth();
+  const { subscription, loading } = useSubscription();
 
   return (
     <div className="min-h-screen bg-background">

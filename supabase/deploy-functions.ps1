@@ -23,6 +23,7 @@ catch {
 $functions = @(
     "stripe-checkout",
     "stripe-payment", 
+    "paypal-payment",
     "create-subscription",
     "webhook-stripe",
     "cancel-subscription",
