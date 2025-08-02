@@ -86,6 +86,7 @@ const CourseDetail: React.FC = () => {
   const [loading, setLoading] = useState(true); // Cambié a true para mostrar loading
   const [activeTab, setActiveTab] = useState('overview');
 
+  // Refrescar curso y progreso al volver de una lección
   useEffect(() => {
     console.log('CourseDetail useEffect triggered with courseId:', courseId, 'user:', user?.id);
     if (courseId) {
@@ -94,6 +95,15 @@ const CourseDetail: React.FC = () => {
         checkEnrollment();
       }
     }
+    // Escuchar cambios de visibilidad para refrescar progreso al volver
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        loadCourse();
+        if (user) checkEnrollment();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [courseId, user]);
 
   const loadCourse = async () => {
@@ -134,21 +144,56 @@ const CourseDetail: React.FC = () => {
       }
 
       if (courseData) {
-        console.log('Curso encontrado, transformando datos...');
-        // Transformar datos a la estructura esperada
+        // Obtener lecciones reales de la base de datos
+        const { data: lessonsData, error: lessonsError } = await supabase
+          .from('lessons')
+          .select('*')
+          .eq('course_id', courseData.id)
+          .order('order_index', { ascending: true });
+
+        if (lessonsError) {
+          console.error('Error cargando lecciones:', lessonsError);
+        }
+
+        // Consultar progreso real del usuario para marcar completadas
+        let completedMap: Record<string, boolean> = {};
+        if (user && lessonsData && lessonsData.length > 0) {
+          const { data: progressData, error: progressError } = await supabase
+            .from('lesson_progress')
+            .select('lesson_id, is_completed')
+            .eq('user_id', user.id)
+            .in('lesson_id', lessonsData.map((l: any) => l.id));
+          if (!progressError && progressData) {
+            progressData.forEach((p: any) => {
+              if (p.is_completed) completedMap[p.lesson_id] = true;
+            });
+          }
+        }
+
+        // Agrupar lecciones en un solo módulo (puedes mejorar esto si tienes módulos reales)
+        const lessons = (lessonsData || []).map((l: any) => ({
+          id: l.id,
+          title: l.title,
+          duration_minutes: l.duration_minutes || 0,
+          order_index: l.order_index || 0,
+          is_free: l.is_free || false,
+          completed: completedMap[l.id] || false,
+          type: l.type || 'video',
+        }));
+
         const formattedCourse: Course = {
           id: courseData.id,
           title: courseData.title,
           description: courseData.description || '',
-          long_description: courseData.description || '',
+          long_description: courseData.long_description || courseData.description || '',
           instructor_name: courseData.profiles?.full_name || 'Instructor',
           instructor_bio: 'Instructor especializado en el tema',
           instructor_avatar: '/placeholder.svg',
           category: courseData.categories?.name || 'General',
           level: courseData.level || 'beginner',
-          subscription_tier: 'free', // MODO DEMO: Todos los cursos son gratuitos
+          subscription_tier: courseData.subscription_tier || 'free',
           duration_hours: courseData.duration_hours || 1,
-          total_lessons: 5, // Placeholder
+          total_lessons: lessons.length,
           total_students: 150, // Placeholder
           rating: 4.8,
           rating_count: 42,
@@ -173,41 +218,19 @@ const CourseDetail: React.FC = () => {
           ],
           modules: [
             {
-              id: '1',
-              title: 'Introducción al Curso',
-              description: 'Conoce los objetivos y metodología',
+              id: 'main',
+              title: 'Contenido del Curso',
+              description: 'Lecciones del curso',
               order_index: 1,
-              lessons: [
-                {
-                  id: '1',
-                  title: 'Bienvenida y objetivos',
-                  duration_minutes: 10,
-                  order_index: 1,
-                  is_free: true,
-                  completed: false,
-                  type: 'video',
-                },
-                {
-                  id: '2',
-                  title: 'Configuración del entorno',
-                  duration_minutes: 15,
-                  order_index: 2,
-                  is_free: false,
-                  completed: false,
-                  type: 'video',
-                }
-              ],
+              lessons: lessons,
             }
           ],
           created_at: courseData.created_at,
           updated_at: courseData.updated_at || courseData.created_at,
           published: courseData.is_published,
         };
-        
-        console.log('Curso formateado:', formattedCourse);
         setCourse(formattedCourse);
       } else {
-        console.log('No hay datos del curso');
         setCourse(null);
       }
     } catch (error) {
@@ -320,78 +343,61 @@ const CourseDetail: React.FC = () => {
   const startLearning = async () => {
     if (!course) return;
 
-    console.log('🚀 Starting learning for course:', course.id);
-    console.log('🔗 Course data:', {
-      id: course.id,
-      title: course.title,
-      modules: course.modules?.length || 0
-    });
-    
-    let firstLessonId: string | null = null;
-
-    // Revisar si el curso ya tiene módulos y lecciones cargadas
+    // Buscar la primera lección no completada
+    let pendingLessonId: string | null = null;
+    let allLessons: Lesson[] = [];
     if (course.modules && course.modules.length > 0) {
-      const firstModule = course.modules[0];
-      if (firstModule && firstModule.lessons && firstModule.lessons.length > 0) {
-        firstLessonId = firstModule.lessons[0].id;
-        console.log('✅ Found first lesson from modules:', firstLessonId);
+      course.modules.forEach((mod) => {
+        if (mod.lessons && mod.lessons.length > 0) {
+          allLessons = allLessons.concat(mod.lessons);
+        }
+      });
+    }
+
+    if (allLessons.length > 0) {
+      const firstPending = allLessons.find((l) => !l.completed);
+      if (firstPending) {
+        pendingLessonId = firstPending.id;
       }
     }
 
-    // Si no se encontró la primera lección, consultarla directamente en Supabase
-    if (!firstLessonId) {
-      console.log('🔍 Searching for first lesson in database...');
-      const { data, error } = await supabase
-        .from('lessons')
-        .select('id, title, order_index')
-        .eq('course_id', course.id)
-        .order('order_index', { ascending: true })
-        .limit(1)
-        .single();
-
-      console.log('📖 Lesson query result:', { data, error });
-      firstLessonId = data?.id ?? null;
-    }
-
-    if (firstLessonId) {
-      const targetUrl = `/courses/${course.id}/lesson/${firstLessonId}`;
-      console.log('✅ Navigating to lesson:', firstLessonId);
-      console.log('🎯 Target URL:', targetUrl);
-      console.log('📍 Current URL before navigation:', window.location.href);
-      
-      // Mostrar toast informativo
+    if (pendingLessonId) {
+      // Redirigir a la primera lección pendiente
+      const targetUrl = `/courses/${course.id}/lesson/${pendingLessonId}`;
       toast({
-        title: "Navegando a la lección",
-        description: `Redirigiendo a la primera lección del curso`,
+        title: "Continúa tu curso",
+        description: `Redirigiendo a la siguiente lección pendiente`,
         duration: 2000,
       });
-      
       navigate(targetUrl);
-      
-      // Log después de la navegación (puede no ejecutarse si hay redirección)
-      setTimeout(() => {
-        console.log('📍 Current URL after navigation:', window.location.href);
-      }, 100);
-    } else {
-      console.log('❌ No lessons found, showing curriculum');
-      
-      // Mostrar toast informativo
-      toast({
-        title: "No hay lecciones disponibles",
-        description: "Este curso aún no tiene lecciones. Puedes ver el contenido en la pestaña Contenido.",
-        duration: 4000,
-        variant: "destructive"
-      });
-      
-      // Si no hay lecciones, mostrar el curriculum
-      setActiveTab('curriculum');
-      setTimeout(() => {
-        const contentSection = document.getElementById('course-content');
-        if (contentSection) {
-          contentSection.scrollIntoView({ behavior: 'smooth' });
-        }
-      }, 100);
+      return;
     }
+
+    // Si no hay lecciones pendientes pero hay lecciones, redirigir al examen final
+    if (allLessons.length > 0) {
+      toast({
+        title: "¡Curso completado!",
+        description: `Redirigiendo al examen final...`,
+        duration: 2000,
+      });
+      navigate(`/exam/${course.id}`);
+      return;
+    }
+
+    // Si no hay lecciones, mostrar el curriculum
+    toast({
+      title: "No hay lecciones disponibles",
+      description: "Este curso aún no tiene lecciones. Puedes ver el contenido en la pestaña Contenido.",
+      duration: 4000,
+      variant: "destructive"
+    });
+    setActiveTab('curriculum');
+    setTimeout(() => {
+      const contentSection = document.getElementById('course-content');
+      if (contentSection) {
+        contentSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 100);
   };
 
   const getLevelColor = (level: string) => {

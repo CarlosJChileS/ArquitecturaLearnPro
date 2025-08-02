@@ -68,6 +68,9 @@ const LessonViewer: React.FC = () => {
       userObject: user // Full user object for debugging
     });
 
+    // Reiniciar progreso local al cambiar de lección
+    setProgress(null);
+
     if (!user) {
       console.warn('⚠️ No user found in LessonViewer - progress updates will fail');
       console.warn('⚠️ User should have auth.users ID, not profiles.id');
@@ -405,7 +408,15 @@ const LessonViewer: React.FC = () => {
 
   const getNextLesson = () => {
     const currentIndex = allLessons.findIndex(l => l.id === lessonId);
-    return currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null;
+    if (currentIndex < allLessons.length - 1) {
+      return allLessons[currentIndex + 1];
+    }
+    return null;
+  };
+
+  const isLastLesson = () => {
+    const currentIndex = allLessons.findIndex(l => l.id === lessonId);
+    return currentIndex === allLessons.length - 1;
   };
 
   const getPreviousLesson = () => {
@@ -474,7 +485,6 @@ const LessonViewer: React.FC = () => {
                 <p className="text-sm text-gray-600">por {course.instructor_name}</p>
               </div>
             </div>
-            
             <div className="flex items-center space-x-2">
               {progress && (
                 <Badge variant="outline" className={progress.completed ? 'bg-green-50 text-green-700' : ''}>
@@ -506,7 +516,6 @@ const LessonViewer: React.FC = () => {
                   </div>
                 </div>
               </CardHeader>
-              
               <CardContent className="space-y-6">
                 {/* Video Player */}
                 {lesson.content_type === 'video' && lesson.video_url && (
@@ -574,13 +583,24 @@ const LessonViewer: React.FC = () => {
                     </Button>
                   </div>
 
-                  <Button
-                    onClick={() => nextLesson && navigateToLesson(nextLesson.id)}
-                    disabled={!nextLesson}
-                  >
-                    Siguiente
-                    <ChevronRight className="h-4 w-4 ml-2" />
-                  </Button>
+                  {/* Siguiente o Examen Final */}
+                  {isLastLesson() ? (
+                    <Button
+                      onClick={() => navigate(`/exam/${courseId}`)}
+                      color="primary"
+                    >
+                      Tomar Examen Final
+                      <Award className="h-4 w-4 ml-2" />
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => nextLesson && navigateToLesson(nextLesson.id)}
+                      disabled={!nextLesson}
+                    >
+                      Siguiente
+                      <ChevronRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

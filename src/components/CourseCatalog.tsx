@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Users, Star, Play } from "lucide-react";
+import { Clock, Users, Star, Play, Home } from "lucide-react";
 import CoursePreviewModal from "./CoursePreviewModal";
 import { useEdgeFunction } from "@/hooks/useEdgeFunctions";
 
@@ -26,6 +27,7 @@ interface Course {
 
 
 const CourseCatalog = () => {
+  const navigate = useNavigate();
   const [previewCourse, setPreviewCourse] = useState<Course | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
   const [categories, setCategories] = useState<string[]>(["Todos"]);
@@ -149,6 +151,16 @@ const CourseCatalog = () => {
     <section id="cursos" className="py-20 bg-background">
       <div className="container mx-auto px-4">
         <div className="text-center mb-16 animate-fade-in">
+          <div className="flex justify-center mb-6">
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/dashboard')}
+              className="flex items-center gap-2 hover:bg-primary hover:text-primary-foreground"
+            >
+              <Home className="h-4 w-4" />
+              Volver al Dashboard
+            </Button>
+          </div>
           <h2 className="text-4xl md:text-5xl font-bold mb-6 text-gradient">
             Catálogo de Cursos
           </h2>

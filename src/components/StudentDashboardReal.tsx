@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { BookOpen, Clock, Trophy, Play, Star, Award, TrendingUp, Users } from 'lucide-react';
+import { BookOpen, Clock, Trophy, Play, Award, TrendingUp, Users, LogOut, Home } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase-mvp';
 
@@ -174,12 +174,38 @@ const StudentDashboard: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Bienvenido, {profile?.full_name || user?.email}
-        </h1>
-        <p className="text-gray-600">
-          Continúa tu aprendizaje y alcanza tus objetivos
-        </p>
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Bienvenido, {profile?.full_name || user?.email}
+            </h1>
+            <p className="text-gray-600">
+              Continúa tu aprendizaje y alcanza tus objetivos
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/')}
+              className="flex items-center gap-2 hover:bg-primary hover:text-primary-foreground"
+            >
+              <Home className="h-4 w-4" />
+              Página Principal
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                // Cerrar sesión
+                supabase.auth.signOut();
+                navigate('/');
+              }}
+              className="flex items-center gap-2 hover:bg-red-600 hover:text-white"
+            >
+              <LogOut className="h-4 w-4" />
+              Cerrar Sesión
+            </Button>
+          </div>
+        </div>
         {!hasActiveSubscription && (
           <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
             <p className="text-yellow-800">
@@ -238,6 +264,121 @@ const StudentDashboard: React.FC = () => {
             <div className="text-2xl font-bold">{stats.certificates}</div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Progreso de Aprendizaje por Categorías */}
+      <div className="space-y-6">
+        <h2 className="text-2xl font-bold text-gray-900">Progreso de Aprendizaje</h2>
+        <p className="text-gray-600">Tu camino de aprendizaje en LearnPro</p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Categorías con progreso */}
+          {enrolledCourses.length > 0 ? (
+            (() => {
+              // Agrupar cursos por categoría
+              const coursesByCategory = enrolledCourses.reduce((acc, course) => {
+                const category = course.category || 'General';
+                if (!acc[category]) {
+                  acc[category] = [];
+                }
+                acc[category].push(course);
+                return acc;
+              }, {} as Record<string, typeof enrolledCourses>);
+
+              return Object.entries(coursesByCategory).map(([category, courses]) => {
+                const totalProgress = courses.reduce((sum, course) => sum + (course.progress?.progress || 0), 0);
+                const avgProgress = Math.round(totalProgress / courses.length);
+                
+                return (
+                  <Card key={category}>
+                    <CardHeader>
+                      <div className="flex justify-between items-center">
+                        <CardTitle className="text-lg">{category}</CardTitle>
+                        <Badge variant="outline">{courses.length} curso{courses.length > 1 ? 's' : ''}</Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>Progreso promedio</span>
+                          <span>{avgProgress}%</span>
+                        </div>
+                        <Progress value={avgProgress} className="h-2" />
+                        <div className="text-xs text-gray-500">
+                          {courses.filter(c => c.progress?.completed).length} de {courses.length} completados
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              });
+            })()
+          ) : (
+            <div className="col-span-2">
+              <Card className="text-center py-8">
+                <CardContent>
+                  <TrendingUp className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                  <p className="text-gray-600">Inscríbete en cursos para ver tu progreso de aprendizaje</p>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Actividad Reciente */}
+      <div className="space-y-6">
+        <h2 className="text-2xl font-bold text-gray-900">Actividad Reciente</h2>
+        
+        {enrolledCourses.length > 0 ? (
+          <Card>
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                {enrolledCourses.slice(0, 5).map((course, index) => (
+                  <div key={course.id} className="flex items-center space-x-4 p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                    <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+                      <img 
+                        src={course.image_url || '/placeholder.svg'} 
+                        alt={course.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {course.title}
+                      </p>
+                      <div className="flex items-center space-x-2 text-xs text-gray-500">
+                        <span>course_viewed</span>
+                        <span>•</span>
+                        <span>{new Date(course.progress?.last_accessed || Date.now()).toLocaleString('es-ES')}</span>
+                      </div>
+                    </div>
+                    <div className="flex-shrink-0">
+                      <Badge variant={course.progress?.progress === 100 ? "default" : "secondary"}>
+                        {course.progress?.progress || 0}%
+                      </Badge>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => navigate(`/courses/${course.id}`)}
+                    >
+                      <Play className="h-3 w-3 mr-1" />
+                      {course.progress?.progress ? 'Continuar' : 'Comenzar'}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="text-center py-8">
+            <CardContent>
+              <Clock className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+              <p className="text-gray-600">No hay actividad reciente. ¡Comienza un curso para ver tu actividad aquí!</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Enrolled Courses */}

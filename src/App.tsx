@@ -27,7 +27,7 @@ import AdminSubscriptions from "./pages/AdminSubscriptions";
 import ExamPage from "./pages/ExamPage";
 import ExamResults from "./pages/ExamResults";
 import CertificateView from "./pages/CertificateView";
-// import LessonViewer from "./pages/LessonViewer";
+import LessonViewer from "./pages/LessonViewer";
 import DatabaseValidator from "./pages/DatabaseValidator";
 import CheckoutDemo from "./pages/CheckoutDemo";
 import NotFound from "./pages/NotFound";
@@ -48,7 +48,7 @@ const App = () => {
               <Route path="/" element={<Index />} />
               <Route path="/courses" element={<Courses />} />
               <Route path="/courses/:courseId" element={<CourseDetail />} />
-              {/* <Route path="/courses/:courseId/lesson/:lessonId" element={<LessonViewer />} /> */}
+              <Route path="/courses/:courseId/lesson/:lessonId" element={<LessonViewer />} />
               <Route path="/courses/:courseId/exam/:lessonId" element={<ExamPage />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />

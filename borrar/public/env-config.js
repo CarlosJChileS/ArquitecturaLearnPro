@@ -1,7 +1,0 @@
-window.ENV = {
-  VITE_SUPABASE_URL: "",
-  VITE_SUPABASE_ANON_KEY: "",
-  VITE_STRIPE_PUBLISHABLE_KEY: "",
-  VITE_APP_URL: "",
-  NODE_ENV: "production"
-};

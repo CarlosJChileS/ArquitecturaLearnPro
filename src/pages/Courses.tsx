@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useEdgeFunction } from '@/hooks/useEdgeFunctions';
-import { Search, Star, Clock, Users, BookOpen, Filter } from 'lucide-react';
+import { Search, Star, Clock, Users, BookOpen, Filter, Home } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCreateCheckout, useEnrollInCourse } from '@/hooks/useEdgeFunctions';
 import { supabase } from '@/lib/supabase-mvp';
@@ -264,10 +264,22 @@ const CoursesPage: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Catálogo de Cursos</h1>
-        <p className="text-gray-600">
-          Descubre y aprende con nuestros cursos especializados
-        </p>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Catálogo de Cursos</h1>
+            <p className="text-gray-600">
+              Descubre y aprende con nuestros cursos especializados
+            </p>
+          </div>
+          <Button 
+            variant="outline" 
+            onClick={() => navigate('/dashboard')}
+            className="flex items-center gap-2 hover:bg-primary hover:text-primary-foreground"
+          >
+            <Home className="h-4 w-4" />
+            Volver al Dashboard
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}

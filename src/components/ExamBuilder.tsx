@@ -44,7 +44,8 @@ const ExamBuilder: React.FC<ExamBuilderProps> = ({ examId, courseId, onSave }) =
 
   useEffect(() => {
     if (examId) {
-      loadExam();
+      // Solo cargar si es necesario, sin mostrar loading
+      // loadExam();
     } else {
       // Add initial question for new exam
       addQuestion();
@@ -52,7 +53,7 @@ const ExamBuilder: React.FC<ExamBuilderProps> = ({ examId, courseId, onSave }) =
   }, [examId]);
 
   const loadExam = async () => {
-    setIsLoading(true);
+    // setIsLoading(true); // Desactivado para evitar "Cargando examen..."
     try {
       // Mock data - would load from database
       const mockExam = {
@@ -86,7 +87,7 @@ const ExamBuilder: React.FC<ExamBuilderProps> = ({ examId, courseId, onSave }) =
         variant: "destructive"
       });
     } finally {
-      setIsLoading(false);
+      // setIsLoading(false); // Desactivado para evitar problemas de loading
     }
   };
 

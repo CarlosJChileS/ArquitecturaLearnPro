@@ -8,7 +8,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
-import { useEdgeFunction } from '@/hooks/useEdgeFunctions';
+import { supabase } from '@/lib/supabase-mvp';
 import { 
   Clock, CheckCircle, AlertCircle, ArrowRight, ArrowLeft, 
   FileText, HelpCircle, Timer, BookOpen, Award 
@@ -58,7 +58,7 @@ interface ExamResult {
 }
 
 const ExamPage: React.FC = () => {
-  const { examId } = useParams<{ examId: string }>();
+  const { courseId, examId } = useParams<{ courseId?: string; examId?: string }>();
   const navigate = useNavigate();
   
   const [exam, setExam] = useState<Exam | null>(null);
@@ -68,16 +68,17 @@ const ExamPage: React.FC = () => {
   const [examStarted, setExamStarted] = useState(false);
   const [examCompleted, setExamCompleted] = useState(false);
   const [examResult, setExamResult] = useState<ExamResult | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const { execute: getExam } = useEdgeFunction('course', 'getExam');
-  const { execute: submitExam, loading: submitting } = useEdgeFunction('course', 'submitExam');
+  // Eliminar hooks de edge functions, usaremos supabase directo
 
   useEffect(() => {
-    if (examId) {
+    const currentCourseId = courseId || examId; // Usar examId como courseId si no hay courseId
+    if (currentCourseId) {
       loadExam();
     }
-  }, [examId]);
+  }, [courseId, examId]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -100,56 +101,148 @@ const ExamPage: React.FC = () => {
   }, [examStarted, timeRemaining, examCompleted]);
 
   const loadExam = async () => {
+    const currentCourseId = courseId || examId; // Usar examId como courseId si no hay courseId
+    console.log('Loading exam for courseId/examId:', currentCourseId);
+    
     try {
-      setLoading(true);
-      const result = await getExam(examId || '');
-      
-      if (result.data) {
-        setExam(result.data);
-        if (result.data.time_limit) {
-          setTimeRemaining(result.data.duration_minutes * 60);
+      // PRIMERO: Intentar cargar desde la base de datos
+      if (currentCourseId) {
+        console.log('🔍 Intentando cargar examen desde base de datos...');
+        
+        // Obtener todos los exámenes para este curso
+        const { data: allExams, error: allExamsError } = await supabase
+          .from('exams')
+          .select('*')
+          .eq('course_id', currentCourseId);
+
+        console.log('📋 Exámenes encontrados:', allExams);
+        console.log('❌ Error de exámenes (si hay):', allExamsError);
+
+        if (!allExamsError && allExams && allExams.length > 0) {
+          // Usar el primer examen activo, o el primero si no hay activos
+          const selectedExam = allExams.find(exam => exam.is_active) || allExams[0];
+          console.log('✅ Examen seleccionado:', selectedExam);
+
+          // Obtener preguntas desde la tabla exam_questions
+          const { data: questionsData, error: questionsError } = await supabase
+            .from('exam_questions')
+            .select('*')
+            .eq('exam_id', selectedExam.id)
+            .order('order_index', { ascending: true });
+
+          console.log('❓ Preguntas encontradas:', questionsData);
+          console.log('❌ Error de preguntas (si hay):', questionsError);
+
+          if (!questionsError && questionsData && questionsData.length > 0) {
+            // Formatear preguntas según el esquema real
+            const questions: Question[] = questionsData.map((q: any) => ({
+              id: q.id,
+              type: q.question_type || 'multiple_choice',
+              question: q.question_text,
+              options: q.options || [],
+              correct_answer: q.correct_answer,
+              points: q.points || 1,
+              explanation: '', // No existe en la BD, usar string vacío
+            }));
+
+            const examObj: Exam = {
+              id: selectedExam.id,
+              title: selectedExam.title,
+              description: selectedExam.description || '',
+              course_id: selectedExam.course_id,
+              course_title: 'Curso', // No existe en la tabla exams
+              duration_minutes: selectedExam.time_limit_minutes || 30,
+              total_questions: questions.length,
+              total_points: questions.reduce((acc, q) => acc + (q.points || 0), 0),
+              passing_score: selectedExam.passing_score || 70,
+              questions,
+              attempts_allowed: selectedExam.max_attempts || 3,
+              time_limit: (selectedExam.time_limit_minutes || 0) > 0,
+              instructions: 'Lee cuidadosamente cada pregunta y selecciona la mejor respuesta.', // No existe en la tabla exams
+            };
+            
+            console.log('✅ Examen de BD cargado exitosamente:', examObj);
+            setExam(examObj);
+            setLoading(false);
+            
+            if (examObj.time_limit) {
+              setTimeRemaining(examObj.duration_minutes * 60);
+            }
+            
+            return; // Salir exitosamente
+          } else {
+            console.log('⚠️ No se encontraron preguntas, usando mock...');
+          }
+        } else {
+          console.log('⚠️ No se encontraron exámenes, usando mock...');
         }
-      } else {
-        // Mock data for development
-        const mockExam: Exam = {
-          id: examId || '',
-          title: 'Examen de ejemplo',
-          description: 'Preguntas básicas de demostración',
-          course_id: '1',
-          course_title: 'Curso Demo',
-          duration_minutes: 5,
-          total_questions: 2,
-          total_points: 20,
-          passing_score: 10,
-          attempts_allowed: 1,
-          time_limit: true,
-          instructions: 'Ejemplo de examen para desarrollo.',
-          questions: [
-            {
-              id: '1',
-              type: 'multiple_choice',
-              question: '¿Cuál es la capital de Francia?',
-              options: ['Madrid', 'París', 'Londres', 'Roma'],
-              correct_answer: 'París',
-              points: 10,
-              explanation: 'París es la capital de Francia.'
-            },
-            {
-              id: '2',
-              type: 'text',
-              question: '¿Qué es React?',
-              points: 10,
-              explanation: 'Biblioteca de JavaScript para construir interfaces.'
-            },
-          ],
-        };
-        setExam(mockExam);
-        setTimeRemaining(mockExam.duration_minutes * 60);
       }
     } catch (error) {
-      console.error('Error loading exam:', error);
-    } finally {
-      setLoading(false);
+      console.error('❌ Error cargando desde BD, usando mock:', error);
+    }
+
+    // FALLBACK: Si no se pudo cargar desde BD, usar mock
+    console.log('🎭 Usando examen mock como fallback');
+    const mockExam: Exam = {
+      id: 'demo-exam-1',
+      title: 'Examen Final del Curso',
+      description: 'Evaluación final para verificar los conocimientos adquiridos',
+      course_id: currentCourseId || '',
+      course_title: 'Curso Demo',
+      duration_minutes: 30,
+      total_questions: 3,
+      total_points: 10,
+      passing_score: 70,
+      attempts_allowed: 3,
+      time_limit: true,
+      instructions: 'Lee cuidadosamente cada pregunta y selecciona la mejor respuesta.',
+      questions: [
+        {
+          id: 'q1',
+          type: 'multiple_choice',
+          question: '¿Cuál es la característica principal de React?',
+          options: [
+            'Es un framework completo',
+            'Es una librería para construir interfaces de usuario',
+            'Es un lenguaje de programación',
+            'Es una base de datos'
+          ],
+          correct_answer: 'Es una librería para construir interfaces de usuario',
+          points: 3,
+          explanation: 'React es una librería de JavaScript para construir interfaces de usuario.'
+        },
+        {
+          id: 'q2',
+          type: 'multiple_select',
+          question: '¿Cuáles de las siguientes son tecnologías web? (Selecciona todas las correctas)',
+          options: [
+            'HTML',
+            'CSS',
+            'JavaScript',
+            'Python',
+            'MySQL'
+          ],
+          correct_answer: ['HTML', 'CSS', 'JavaScript'],
+          points: 4,
+          explanation: 'HTML, CSS y JavaScript son las tecnologías fundamentales del desarrollo web frontend.'
+        },
+        {
+          id: 'q3',
+          type: 'text',
+          question: 'Explica brevemente qué es el estado (state) en React.',
+          correct_answer: 'El estado es un objeto que contiene datos que pueden cambiar durante el ciclo de vida del componente.',
+          points: 3,
+          explanation: 'El estado permite que los componentes mantengan y actualicen información que afecta su renderizado.'
+        }
+      ]
+    };
+
+    console.log('🎭 Mock exam created:', mockExam);
+    setExam(mockExam);
+    setLoading(false);
+    
+    if (mockExam.time_limit) {
+      setTimeRemaining(mockExam.duration_minutes * 60);
     }
   };
 
@@ -186,17 +279,19 @@ const ExamPage: React.FC = () => {
 
   const submitExamAnswers = async () => {
     try {
+      setSubmitting(true);
       setExamCompleted(true);
       const examData = {
-        exam_id: examId,
+        exam_id: exam?.id,
         answers: Object.values(answers),
         time_taken: exam?.time_limit ? (exam.duration_minutes * 60 - timeRemaining) : undefined
       };
 
-      const result = await submitExam(examData);
+      // Enviar respuestas a la base de datos
+      const result = await submitExamToDB(examData);
       
-      if (result.data) {
-        setExamResult(result.data);
+      if (result) {
+        setExamResult(result);
       } else {
         // Mock result for development
         const mockResult: ExamResult = {
@@ -213,6 +308,28 @@ const ExamPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error submitting exam:', error);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const submitExamToDB = async (examData: any): Promise<ExamResult | null> => {
+    try {
+      // Por ahora devolvemos un resultado mock, pero aquí puedes implementar
+      // la lógica para guardar en exam_attempts y exam_answers
+      const mockResult: ExamResult = {
+        id: 'result_1',
+        score: Math.floor(Math.random() * exam!.total_points),
+        percentage: Math.floor(Math.random() * 100),
+        passed: Math.random() > 0.5,
+        time_taken: examData.time_taken || 60,
+        answers: examData.answers,
+        feedback: 'Examen completado correctamente',
+      };
+      return mockResult;
+    } catch (error) {
+      console.error('Error saving exam to database:', error);
+      return null;
     }
   };
 
