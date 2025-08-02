@@ -128,7 +128,10 @@ All colors MUST be HSL.
   }
   
   .text-gradient {
-    @apply bg-gradient-primary bg-clip-text text-transparent;
+    @apply bg-gradient-primary bg-clip-text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: hsl(var(--primary)); /* Fallback color */
   }
   
   .bg-gradient-hero {

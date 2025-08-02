@@ -33,7 +33,7 @@ const Header = () => {
               <div className="p-2 bg-gradient-primary rounded-lg">
                 <GraduationCap className="h-6 w-6 text-white" />
               </div>
-              <span className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+              <span className="text-2xl font-bold text-gradient">
                 LearnPro
               </span>
             </div>
