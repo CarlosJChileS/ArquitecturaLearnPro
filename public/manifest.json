@@ -1,0 +1,17 @@
+{
+  "name": "LearnPro - Plataforma de Cursos Online",
+  "short_name": "LearnPro",
+  "description": "Transforma tu carrera profesional con más de 1,000 cursos especializados",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3B82F6",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
