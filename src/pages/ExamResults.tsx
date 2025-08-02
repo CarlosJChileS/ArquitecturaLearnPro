@@ -28,7 +28,7 @@ interface Certificate {
 const ExamResults = () => {
   const { attemptId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   
   const [attempt, setAttempt] = useState<ExamAttempt | null>(null);
   const [certificate, setCertificate] = useState<Certificate | null>(null);
@@ -74,8 +74,83 @@ const ExamResults = () => {
   };
 
   const downloadCertificate = () => {
-    // This would integrate with a certificate generation service
-    console.log('Download certificate:', certificate?.certificate_number);
+    if (!certificate || !attempt) return;
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    canvas.width = 1200;
+    canvas.height = 800;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = '#3b82f6';
+    ctx.lineWidth = 8;
+    ctx.strokeRect(40, 40, canvas.width - 80, canvas.height - 80);
+    ctx.strokeStyle = '#e5e7eb';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(60, 60, canvas.width - 120, canvas.height - 120);
+    ctx.fillStyle = '#1f2937';
+    ctx.font = 'bold 48px Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('CERTIFICADO DE FINALIZACIÓN', canvas.width / 2, 150);
+    ctx.strokeStyle = '#3b82f6';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(300, 180);
+    ctx.lineTo(900, 180);
+    ctx.stroke();
+    ctx.fillStyle = '#4b5563';
+    ctx.font = '24px Arial, sans-serif';
+    ctx.fillText('Se certifica que', canvas.width / 2, 250);
+    // Nombre personalizado del estudiante
+    ctx.fillStyle = '#1f2937';
+    ctx.font = 'bold 36px Arial, sans-serif';
+    const studentName = (profile && profile.full_name) ? profile.full_name : 'Estudiante';
+    ctx.fillText(studentName, canvas.width / 2, 310);
+    ctx.fillStyle = '#4b5563';
+    ctx.font = '24px Arial, sans-serif';
+    ctx.fillText('ha completado exitosamente el curso', canvas.width / 2, 370);
+    // Título personalizado del curso
+    ctx.fillStyle = '#3b82f6';
+    ctx.font = 'bold 32px Arial, sans-serif';
+    // Soporte para mock y real: usar attempt.title si existe, si no attempt.course_title
+    let courseTitle = 'Curso Completado';
+    if (attempt) {
+      if ('title' in attempt && attempt.title) {
+        courseTitle = (attempt as any).title;
+      } else if ('course_title' in attempt && attempt.course_title) {
+        courseTitle = (attempt as any).course_title;
+      }
+    }
+    ctx.fillText(courseTitle, canvas.width / 2, 430);
+    ctx.fillText(courseTitle, canvas.width / 2, 430);
+    ctx.fillStyle = '#4b5563';
+    ctx.font = '20px Arial, sans-serif';
+    const completedDate = new Date(attempt.completed_at).toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    ctx.fillText(`Completado el ${completedDate}`, canvas.width / 2, 500);
+    ctx.fillStyle = '#059669';
+    ctx.font = 'bold 24px Arial, sans-serif';
+    ctx.fillText(`Calificación: ${attempt.percentage}%`, canvas.width / 2, 540);
+    ctx.fillStyle = '#6b7280';
+    ctx.font = '18px Arial, sans-serif';
+    ctx.fillText('LearnPro - Plataforma de Aprendizaje Online', canvas.width / 2, 680);
+    const today = new Date().toLocaleDateString('es-ES');
+    ctx.fillText(`Fecha de emisión: ${today}`, canvas.width / 2, 710);
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `certificado-${certificate.certificate_number}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }
+    }, 'image/png', 1.0);
   };
 
   const shareCertificate = () => {

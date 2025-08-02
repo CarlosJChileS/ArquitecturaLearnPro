@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Save, Plus, Trash2, Eye } from "lucide-react";
+import { extractYouTubeVideoId, getYouTubeThumbnail } from '../lib/youtube-utils';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,6 +46,18 @@ interface Lesson {
   updated_at?: string;
 }
 
+// Añadir interface para preguntas de examen
+interface ExamQuestion {
+  id: string;
+  exam_id: string;
+  question_text: string;
+  question_type: string;
+  options: string[] | null;
+  correct_answer: string | null;
+  points: number;
+  order_index: number;
+}
+
 const AdminCourseEditor = () => {
   const navigate = useNavigate();
   const { courseId } = useParams();
@@ -54,8 +67,10 @@ const AdminCourseEditor = () => {
   // States
   const [course, setCourse] = useState<Course | null>(null);
   const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [examQuestions, setExamQuestions] = useState<ExamQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
 
   // Course form state
   const [courseForm, setCourseForm] = useState({
@@ -83,6 +98,18 @@ const AdminCourseEditor = () => {
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
   const [showLessonForm, setShowLessonForm] = useState(false);
 
+  // Question form state
+  const [questionForm, setQuestionForm] = useState({
+    question_text: '',
+    question_type: 'multiple_choice',
+    options: ['', '', '', ''],
+    correct_answer: '',
+    points: 1
+  });
+
+  const [editingQuestion, setEditingQuestion] = useState<ExamQuestion | null>(null);
+  const [showQuestionForm, setShowQuestionForm] = useState(false);
+
   // Check authentication
   useEffect(() => {
     if (!user) {
@@ -97,6 +124,13 @@ const AdminCourseEditor = () => {
       loadLessons();
     } else {
       setLoading(false);
+    }
+  }, [courseId]);
+
+  // Cargar preguntas al cargar curso
+  useEffect(() => {
+    if (courseId && courseId !== 'new') {
+      loadExamQuestions();
     }
   }, [courseId]);
 
@@ -160,6 +194,65 @@ const AdminCourseEditor = () => {
       setLessons(data || []);
     } catch (error) {
       console.error('Error loading lessons:', error);
+    }
+  };
+
+  // Cargar preguntas del examen
+  const loadExamQuestions = async () => {
+    if (!courseId) return;
+    setLoadingQuestions(true);
+    try {
+      console.log('=== DEBUGGING EXAM QUESTIONS ===');
+      console.log('Cargando preguntas para curso específico:', courseId);
+      
+      // Buscar TODOS los exámenes de este curso específico usando el cliente genérico
+      const { data: exams, error: examError } = await supabase
+        .from('exams' as any)
+        .select('id, course_id, title')
+        .eq('course_id', courseId);
+      
+      console.log('Exámenes encontrados para este curso:', exams);
+      console.log('Error al buscar exámenes:', examError);
+      
+      if (examError) {
+        console.error('Error en consulta de exámenes:', examError);
+        setExamQuestions([]);
+        return;
+      }
+      
+      if (!exams || exams.length === 0) {
+        console.log('No hay exámenes para este curso específico');
+        setExamQuestions([]);
+        return;
+      }
+      
+      // Usar el primer examen encontrado para este curso
+      const examId = (exams as any)[0].id;
+      console.log('Usando examen ID:', examId, 'del curso:', courseId);
+      console.log('Título del examen:', (exams as any)[0].title);
+      
+      const { data: questions, error: qError } = await supabase
+        .from('exam_questions' as any)
+        .select('*')
+        .eq('exam_id', examId)
+        .order('order_index');
+      
+      console.log('Preguntas encontradas:', questions);
+      console.log('Error al buscar preguntas:', qError);
+      console.log('Cantidad de preguntas:', questions ? questions.length : 0);
+      
+      if (qError) {
+        console.error('Error en consulta de preguntas:', qError);
+        throw qError;
+      }
+      
+      setExamQuestions(questions || []);
+      console.log('=== FIN DEBUGGING ===');
+    } catch (err) {
+      console.error('Error cargando preguntas:', err);
+      setExamQuestions([]);
+    } finally {
+      setLoadingQuestions(false);
     }
   };
 
@@ -299,7 +392,127 @@ const AdminCourseEditor = () => {
     }
   };
 
-  const resetLessonForm = () => {
+// Borrar pregunta
+const deleteExamQuestion = async (questionId: string) => {
+  if (!window.confirm('¿Seguro que deseas borrar esta pregunta?')) return;
+  try {
+    const { error } = await supabase
+      .from('exam_questions' as any)
+      .delete()
+      .eq('id', questionId);
+    if (error) throw error;
+    toast({ title: 'Éxito', description: 'Pregunta eliminada' });
+    loadExamQuestions();
+  } catch (err) {
+    toast({ title: 'Error', description: 'No se pudo borrar la pregunta', variant: 'destructive' });
+  }
+};
+
+// Guardar pregunta
+const saveExamQuestion = async () => {
+  if (!courseId) return;
+  try {
+    setSaving(true);
+    
+    // Buscar TODOS los exámenes del curso (no solo final)
+    const { data: exams, error: examError } = await supabase
+      .from('exams' as any)
+      .select('id')
+      .eq('course_id', courseId);
+    
+    let examId;
+    
+    if (examError || !exams || exams.length === 0) {
+      // Si no hay exámenes para este curso, crear uno nuevo
+      console.log('Creando nuevo examen para el curso:', courseId);
+      
+      const { data: newExam, error: createExamError } = await supabase
+        .from('exams' as any)
+        .insert({
+          course_id: courseId,
+          title: 'Examen Final',
+          description: 'Examen final del curso',
+          passing_score: 70,
+          max_attempts: 3,
+          time_limit_minutes: 60,
+          is_active: true
+        })
+        .select()
+        .single();
+      
+      if (createExamError) {
+        console.error('Error creando examen:', createExamError);
+        throw createExamError;
+      }
+      
+      examId = newExam.id;
+      console.log('Examen creado con ID:', examId);
+    } else {
+      examId = exams[0].id;
+      console.log('Usando examen existente con ID:', examId);
+    }
+
+    const questionData = {
+      ...questionForm,
+      exam_id: examId,
+      options: questionForm.question_type === 'text' ? null : JSON.stringify(questionForm.options),
+      order_index: editingQuestion ? editingQuestion.order_index : examQuestions.length + 1
+    };
+
+    if (editingQuestion) {
+      // Actualizar pregunta
+      const { error } = await supabase
+        .from('exam_questions' as any)
+        .update(questionData)
+        .eq('id', editingQuestion.id);
+      
+      if (error) throw error;
+      toast({ title: 'Éxito', description: 'Pregunta actualizada' });
+    } else {
+      // Crear pregunta
+      const { error } = await supabase
+        .from('exam_questions' as any)
+        .insert(questionData);
+      
+      if (error) throw error;
+      toast({ title: 'Éxito', description: 'Pregunta creada' });
+    }
+
+    setShowQuestionForm(false);
+    setEditingQuestion(null);
+    resetQuestionForm();
+    loadExamQuestions();
+  } catch (err) {
+    console.error('Error guardando pregunta:', err);
+    toast({ title: 'Error', description: 'Error al guardar la pregunta', variant: 'destructive' });
+  } finally {
+    setSaving(false);
+  }
+};
+
+// Resetear formulario de pregunta
+const resetQuestionForm = () => {
+  setQuestionForm({
+    question_text: '',
+    question_type: 'multiple_choice',
+    options: ['', '', '', ''],
+    correct_answer: '',
+    points: 1
+  });
+};
+
+// Empezar a editar pregunta
+const startEditingQuestion = (question: ExamQuestion) => {
+  setEditingQuestion(question);
+  setQuestionForm({
+    question_text: question.question_text,
+    question_type: question.question_type,
+    options: question.options ? JSON.parse(question.options) : ['', '', '', ''],
+    correct_answer: question.correct_answer || '',
+    points: question.points
+  });
+  setShowQuestionForm(true);
+};  const resetLessonForm = () => {
     setLessonForm({
       title: '',
       description: '',
@@ -356,8 +569,13 @@ const AdminCourseEditor = () => {
                 variant="outline" 
                 size="sm"
                 onClick={() => {
-                  const lessonsSection = document.getElementById('lessons-section');
-                  lessonsSection?.scrollIntoView({ behavior: 'smooth' });
+                  // Ensure lessons section exists before scrolling
+                  setTimeout(() => {
+                    const lessonsSection = document.getElementById('lessons-section');
+                    if (lessonsSection) {
+                      lessonsSection.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }, 100);
                 }}
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -636,6 +854,218 @@ const AdminCourseEditor = () => {
                             variant="outline"
                             size="sm"
                             onClick={() => deleteLesson(lesson.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Exam Management Section */}
+          {courseId !== 'new' && (
+            <Card className="border-2 border-yellow-400/30 mt-8">
+              <CardHeader className="flex flex-row items-center justify-between bg-yellow-50">
+                <div>
+                  <CardTitle className="text-xl">📝 Gestión de Examen ({examQuestions.length})</CardTitle>
+                  <CardDescription className="text-base">
+                    Administra las preguntas del examen final de este curso
+                  </CardDescription>
+                </div>
+                <Button
+                  size="lg"
+                  className="bg-yellow-500 hover:bg-yellow-600 text-white"
+                  onClick={() => {
+                    resetQuestionForm();
+                    setEditingQuestion(null);
+                    setShowQuestionForm(!showQuestionForm);
+                  }}
+                >
+                  <Plus className="h-5 w-5 mr-2" />
+                  {showQuestionForm ? 'Cerrar Formulario' : 'Agregar Pregunta'}
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {showQuestionForm && (
+                  <Card className="mb-4">
+                    <CardHeader>
+                      <CardTitle className="text-lg">
+                        {editingQuestion ? 'Editar Pregunta' : 'Nueva Pregunta'}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="question-text">Pregunta *</Label>
+                          <Textarea
+                            id="question-text"
+                            value={questionForm.question_text}
+                            onChange={(e) => setQuestionForm({ ...questionForm, question_text: e.target.value })}
+                            placeholder="Escribe la pregunta"
+                            rows={3}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="question-type">Tipo de Pregunta</Label>
+                          <Select
+                            value={questionForm.question_type}
+                            onValueChange={(value) => setQuestionForm({ ...questionForm, question_type: value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="multiple_choice">Opción Múltiple</SelectItem>
+                              <SelectItem value="multiple_select">Selección Múltiple</SelectItem>
+                              <SelectItem value="text">Respuesta Abierta</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      {questionForm.question_type !== 'text' && (
+                        <div className="space-y-2">
+                          <Label>Opciones</Label>
+                          {questionForm.options.map((option, index) => (
+                            <div key={index} className="flex items-center space-x-2">
+                              <Input
+                                value={option}
+                                onChange={(e) => {
+                                  const newOptions = [...questionForm.options];
+                                  newOptions[index] = e.target.value;
+                                  setQuestionForm({ ...questionForm, options: newOptions });
+                                }}
+                                placeholder={`Opción ${index + 1}`}
+                              />
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  const newOptions = questionForm.options.filter((_, i) => i !== index);
+                                  setQuestionForm({ ...questionForm, options: newOptions });
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setQuestionForm({ 
+                                ...questionForm, 
+                                options: [...questionForm.options, ''] 
+                              });
+                            }}
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Agregar Opción
+                          </Button>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="correct-answer">Respuesta Correcta</Label>
+                          {questionForm.question_type === 'multiple_choice' ? (
+                            <Select
+                              value={questionForm.correct_answer}
+                              onValueChange={(value) => setQuestionForm({ ...questionForm, correct_answer: value })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecciona la respuesta correcta" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {questionForm.options.map((option, index) => (
+                                  <SelectItem key={index} value={option}>
+                                    {option || `Opción ${index + 1}`}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Textarea
+                              id="correct-answer"
+                              value={questionForm.correct_answer}
+                              onChange={(e) => setQuestionForm({ ...questionForm, correct_answer: e.target.value })}
+                              placeholder="Respuesta esperada o criterios de evaluación"
+                              rows={2}
+                            />
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="points">Puntos</Label>
+                          <Input
+                            id="points"
+                            type="number"
+                            min="1"
+                            value={questionForm.points}
+                            onChange={(e) => setQuestionForm({ ...questionForm, points: Number(e.target.value) })}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Button onClick={saveExamQuestion} disabled={saving}>
+                          <Save className="h-4 w-4 mr-2" />
+                          {saving ? 'Guardando...' : 'Guardar Pregunta'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setShowQuestionForm(false);
+                            setEditingQuestion(null);
+                            resetQuestionForm();
+                          }}
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {loadingQuestions ? (
+                  <div className="text-center py-4 text-muted-foreground">Cargando preguntas...</div>
+                ) : examQuestions.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No hay preguntas en el examen. Agrega la primera pregunta.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {examQuestions.map((q, index) => (
+                      <div key={q.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <span className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center text-sm font-medium">
+                            {index + 1}
+                          </span>
+                          <div>
+                            <div className="font-medium">{q.question_text}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {q.question_type === 'multiple_choice' && 'Opción Múltiple'}
+                              {q.question_type === 'multiple_select' && 'Selección Múltiple'}
+                              {q.question_type === 'text' && 'Respuesta Abierta'}
+                              {' • '}{q.points} pts
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => startEditingQuestion(q)}
+                          >
+                            Editar
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => deleteExamQuestion(q.id)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
