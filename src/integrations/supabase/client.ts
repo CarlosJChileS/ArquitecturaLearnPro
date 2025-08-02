@@ -2,10 +2,48 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-// Variables directas - funciona también con variables inyectadas en runtime
-const runtimeEnv = (typeof window !== 'undefined' ? (window as any).ENV : {}) || {};
-const SUPABASE_URL = runtimeEnv.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL || "https://xfuhbjqqlgfxxkjvezhy.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = runtimeEnv.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhmdWhianFxbGdmeHhranZlemh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMwOTQ2MzgsImV4cCI6MjA2ODY3MDYzOH0.EFZFZyDF7eR1rkXCgZq-Q-B96I_H9XP1ulQsyzAyVOI";
+// Helper function to get environment variables with fallbacks
+function getEnvVar(key: string, fallback: string): string {
+  // 1. Check runtime window.ENV (for production builds)
+  if (typeof window !== 'undefined' && (window as any).ENV?.[key]) {
+    return (window as any).ENV[key];
+  }
+  
+  // 2. Check Vite environment variables (for development)
+  if (import.meta.env?.[key]) {
+    return import.meta.env[key];
+  }
+  
+  // 3. Use fallback
+  console.warn(`⚠️ Environment variable ${key} not found, using fallback`);
+  return fallback;
+}
+
+// Default configuration for fallback
+const DEFAULT_SUPABASE_URL = "https://xfuhbjqqlgfxxkjvezhy.supabase.co";
+const DEFAULT_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhmdWhianFxbGdmeHhranZlemh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMwOTQ2MzgsImV4cCI6MjA2ODY3MDYzOH0.EFZFZyDF7eR1rkXCgZq-Q-B96I_H9XP1ulQsyzAyVOI";
+
+// Get configuration
+const SUPABASE_URL = getEnvVar('VITE_SUPABASE_URL', DEFAULT_SUPABASE_URL);
+const SUPABASE_PUBLISHABLE_KEY = getEnvVar('VITE_SUPABASE_ANON_KEY', DEFAULT_SUPABASE_ANON_KEY);
+
+// Validar que las variables existen y no están vacías
+if (!SUPABASE_URL || SUPABASE_URL === 'undefined') {
+  console.error('❌ SUPABASE_URL is not defined or invalid');
+  throw new Error('SUPABASE_URL is required');
+}
+
+if (!SUPABASE_PUBLISHABLE_KEY || SUPABASE_PUBLISHABLE_KEY === 'undefined') {
+  console.error('❌ SUPABASE_PUBLISHABLE_KEY is not defined or invalid');
+  throw new Error('SUPABASE_PUBLISHABLE_KEY is required');
+}
+
+// Debug logging (remove in production)
+console.log('🔗 Supabase client configuration:', {
+  url: SUPABASE_URL,
+  hasKey: !!SUPABASE_PUBLISHABLE_KEY,
+  keyPreview: SUPABASE_PUBLISHABLE_KEY.substring(0, 20) + '...'
+});
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
