@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Check, Star, Zap } from "lucide-react";
+import { Check, Star, Zap, Heart } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useToast } from "@/hooks/use-toast";
@@ -12,17 +12,17 @@ import { supabase } from "@/integrations/supabase/client";
 
 const fallbackPlans = [
   {
-    id: "Basic",
-    name: "Basic",
-    description: "Perfecto para comenzar tu viaje de aprendizaje",
-    monthlyPrice: 29,
-    annualPrice: 299,
-    icon: Star,
+    id: "Donacion",
+    name: "Donación",
+    description: "Apoya nuestro proyecto y obtén acceso básico",
+    monthlyPrice: 12,
+    annualPrice: 120,
+    icon: Heart,
     popular: false,
     features: [
-      "Acceso a cursos Basic",
+      "Acceso a cursos básicos",
       "Certificados de finalización",
-      "Soporte básico",
+      "Soporte comunitario",
       "Acceso móvil y web",
       "Progreso sincronizado"
     ]
@@ -31,8 +31,8 @@ const fallbackPlans = [
     id: "Premium",
     name: "Premium",
     description: "La opción más popular para profesionales",
-    monthlyPrice: 49,
-    annualPrice: 499,
+    monthlyPrice: 60,
+    annualPrice: 600,
     icon: Zap,
     popular: true,
     features: [
@@ -44,6 +44,25 @@ const fallbackPlans = [
       "Progreso sincronizado",
       "Descargas offline",
       "Comunidad exclusiva"
+    ]
+  },
+  {
+    id: "Pro",
+    name: "Pro",
+    description: "Para equipos y empresas que buscan el máximo rendimiento",
+    monthlyPrice: 120,
+    annualPrice: 1200,
+    icon: Star,
+    popular: false,
+    features: [
+      "Todo lo de Premium",
+      "Acceso para equipos",
+      "Certificaciones avanzadas",
+      "Soporte 24/7 dedicado",
+      "Herramientas de gestión",
+      "Reportes personalizados",
+      "Integración con LMS",
+      "API de acceso"
     ]
   }
 ];
@@ -61,10 +80,18 @@ const PricingPlans = () => {
         description: p.description || '',
         monthlyPrice: p.duration_months === 12 ? p.price / 12 : p.price,
         annualPrice: p.duration_months === 12 ? p.price : p.price * 12,
-        icon: p.name.toLowerCase().includes('premium') ? Zap : Star,
+        icon: p.name.toLowerCase().includes('premium') ? Zap : 
+              p.name.toLowerCase().includes('donacion') ? Heart : Star,
         popular: p.name.toLowerCase().includes('premium'),
         features: p.features,
       }))
+      .sort((a, b) => {
+        // Ordenar: Donación (1), Premium (2), Pro (3)
+        const order = { 'donación': 1, 'donacion': 1, 'premium': 2, 'pro': 3 };
+        const aOrder = order[a.name.toLowerCase()] || 4;
+        const bOrder = order[b.name.toLowerCase()] || 4;
+        return aOrder - bOrder;
+      })
     : fallbackPlans;
 
   const handlePayPal = async (planName: string) => {
@@ -186,7 +213,7 @@ const PricingPlans = () => {
       </div>
 
       {/* Plans Container */}
-      <div className="flex flex-col lg:flex-row gap-8 justify-center items-stretch max-w-6xl mx-auto">
+      <div className="flex flex-col lg:flex-row gap-6 justify-center items-stretch max-w-7xl mx-auto">
         {plans.map((plan, index) => {
           const IconComponent = plan.icon;
           const currentPrice = isAnnual ? plan.annualPrice : plan.monthlyPrice;
@@ -196,7 +223,7 @@ const PricingPlans = () => {
           return (
             <Card 
               key={plan.name}
-              className={`relative flex-1 max-w-md mx-auto lg:mx-0 transition-all duration-300 animate-scale-in ${
+              className={`relative flex-1 max-w-sm mx-auto lg:mx-0 transition-all duration-300 animate-scale-in flex flex-col ${
                 plan.popular 
                   ? 'ring-2 ring-primary shadow-glow bg-gradient-card scale-105 z-10' 
                   : 'hover:shadow-card bg-card hover:scale-105'
@@ -209,17 +236,27 @@ const PricingPlans = () => {
                 </div>
               )}
               
+              {plan.name === "Donación" && (
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-pink-500 text-white px-6 py-2 rounded-full text-sm font-medium shadow-lg z-20">
+                  ❤️ Apoya el Proyecto
+                </div>
+              )}
+              
               {isCurrentPlan && (
                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-2 rounded-full text-sm font-medium shadow-lg z-20">
                   ✓ Tu Plan Actual
                 </div>
               )}
               
-              <CardHeader className={`text-center ${plan.popular || isCurrentPlan ? 'pt-16' : 'pt-8'}`}>
+              <CardHeader className={`text-center ${plan.popular || isCurrentPlan || plan.name === "Donación" ? 'pt-16' : 'pt-8'}`}>
                 <div className={`inline-flex p-4 rounded-full mb-6 mx-auto ${
-                  plan.popular ? 'bg-gradient-primary' : 'bg-muted'
+                  plan.popular ? 'bg-gradient-primary' : 
+                  plan.name === "Donación" ? 'bg-pink-500' : 'bg-muted'
                 }`}>
-                  <IconComponent className={`h-8 w-8 ${plan.popular ? 'text-white' : 'text-primary'}`} />
+                  <IconComponent className={`h-8 w-8 ${
+                    plan.popular ? 'text-white' : 
+                    plan.name === "Donación" ? 'text-white' : 'text-primary'
+                  }`} />
                 </div>
                 
                 <CardTitle className="text-3xl font-bold text-foreground mb-2">
@@ -236,11 +273,11 @@ const PricingPlans = () => {
                     </span>
                     <span className="text-muted-foreground ml-2 text-lg">{period}</span>
                   </div>
-                  {isAnnual && (
+                  {isAnnual && (plan.monthlyPrice * 12) > plan.annualPrice && (
                     <div className="text-sm text-muted-foreground mt-3">
-                      <span className="line-through">${plan.monthlyPrice * 12}/año</span>
+                      <span className="line-through">${(plan.monthlyPrice * 12).toFixed(0)}/año</span>
                       <span className="text-green-600 ml-2 font-medium">
-                        Ahorra ${(plan.monthlyPrice * 12 - plan.annualPrice).toFixed(2)}
+                        Ahorra ${((plan.monthlyPrice * 12) - plan.annualPrice).toFixed(0)} ({Math.round(((plan.monthlyPrice * 12 - plan.annualPrice) / (plan.monthlyPrice * 12)) * 100)}%)
                       </span>
                     </div>
                   )}
@@ -249,7 +286,7 @@ const PricingPlans = () => {
               
               <CardContent className="px-8 pb-8 flex flex-col h-full">
                 {/* Buttons Section */}
-                <div className="mb-8">
+                <div className="mb-8 mt-auto">
                   {isCurrentPlan ? (
                     <Button 
                       variant="outline" 
