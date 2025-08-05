@@ -273,12 +273,12 @@ const About = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/subscription">
-                <Button size="lg" className="bg-white text-purple-600 hover:bg-gray-100 px-8">
+                <Button size="lg" className="bg-white text-purple-600 hover:bg-gray-100 px-8 font-semibold">
                   Comenzar ahora
                 </Button>
               </Link>
               <Link to="/contact">
-                <Button variant="outline" size="lg" className="border-white text-white hover:bg-white hover:text-purple-600 px-8">
+                <Button size="lg" className="bg-transparent border-2 border-white text-white hover:bg-white hover:text-purple-600 px-8 font-semibold transition-all duration-300">
                   Contáctanos
                 </Button>
               </Link>
