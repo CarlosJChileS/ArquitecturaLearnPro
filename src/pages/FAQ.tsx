@@ -8,7 +8,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { useState } from "react";
 import {
   Search, HelpCircle, BookOpen, CreditCard,
-  Shield, Award, MessageCircle, CheckCircle2
+  Shield, Award, MessageCircle, CheckCircle2, Sparkles, ArrowLeft
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -17,25 +17,29 @@ const faqCategories = [
     id: "subscription",
     name: "Suscripción",
     icon: CreditCard,
-    color: "bg-blue-100 text-blue-600"
+    color: "bg-blue-500/10 text-blue-600 border-blue-200",
+    bgColor: "bg-blue-500"
   },
   {
     id: "courses",
     name: "Cursos",
     icon: BookOpen,
-    color: "bg-green-100 text-green-600"
+    color: "bg-green-500/10 text-green-600 border-green-200",
+    bgColor: "bg-green-500"
   },
   {
     id: "certificates",
     name: "Certificados",
     icon: Award,
-    color: "bg-purple-100 text-purple-600"
+    color: "bg-purple-500/10 text-purple-600 border-purple-200",
+    bgColor: "bg-purple-500"
   },
   {
     id: "technical",
     name: "Técnico",
     icon: Shield,
-    color: "bg-orange-100 text-orange-600"
+    color: "bg-orange-500/10 text-orange-600 border-orange-200",
+    bgColor: "bg-orange-500"
   }
 ];
 
@@ -120,6 +124,7 @@ const faqs = [
 const FAQ = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   const filteredFaqs = faqs.filter(faq => {
     const matchesSearch = faq.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -133,62 +138,100 @@ const FAQ = () => {
       <Header />
       
       <main>
-        {/* Hero Section */}
-        <section className="bg-gray-900 text-white py-16">
-          <div className="container mx-auto px-4">
+        {/* Hero Section - Improved */}
+        <section className="relative bg-gradient-to-br from-primary/10 via-background to-accent/10 py-20 overflow-hidden">
+          {/* Background decorative elements */}
+          <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
+          <div className="absolute top-0 left-1/4 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-float"></div>
+          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '1.5s' }}></div>
+          
+          <div className="container mx-auto px-4 relative z-10">
             <div className="max-w-4xl mx-auto text-center">
-              <h1 className="text-4xl md:text-5xl font-bold mb-6">
-                Centro de Ayuda
-              </h1>
-              <p className="text-xl text-gray-300 mb-8">
-                Encuentra respuestas a las preguntas más frecuentes sobre nuestra plataforma
-              </p>
-              
-              {/* Search */}
-              <div className="max-w-md mx-auto mb-8">
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                  <Input
-                    placeholder="Buscar en preguntas frecuentes..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-12 bg-white/10 border-white/20 text-white placeholder:text-gray-400"
-                  />
-                </div>
+              {/* Navigation breadcrumb */}
+              <div className="mb-8">
+                <Link to="/" className="inline-flex items-center text-muted-foreground hover:text-primary transition-colors animate-fade-in-up">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Volver al inicio
+                </Link>
               </div>
               
-              <div className="flex flex-wrap justify-center gap-3">
-                <Badge className="bg-green-600 text-white px-4 py-2">
-                  <CheckCircle2 className="w-4 h-4 mr-2" />
-                  Respuestas instantáneas
-                </Badge>
-                <Badge className="bg-blue-600 text-white px-4 py-2">
-                  <MessageCircle className="w-4 h-4 mr-2" />
-                  Soporte 24/7
-                </Badge>
+              <div className="animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+                <div className="inline-flex p-4 bg-gradient-primary rounded-2xl mb-6">
+                  <HelpCircle className="h-8 w-8 text-white" />
+                </div>
+                <h1 className="text-5xl md:text-6xl font-bold mb-6 text-gradient-primary">
+                  Preguntas Frecuentes
+                </h1>
+                <p className="text-xl md:text-2xl text-muted-foreground mb-8 leading-relaxed">
+                  Encuentra respuestas rápidas a las preguntas más comunes sobre nuestra plataforma
+                </p>
+                
+                {/* Search - Improved */}
+                <div className="max-w-md mx-auto mb-8 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+                  <div className="relative">
+                    <Search className={`absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 transition-colors duration-200 ${
+                      isSearchFocused ? 'text-primary' : 'text-muted-foreground'
+                    }`} />
+                    <Input
+                      placeholder="Buscar en preguntas frecuentes..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      onFocus={() => setIsSearchFocused(true)}
+                      onBlur={() => setIsSearchFocused(false)}
+                      className={`pl-12 h-12 border-2 transition-all duration-200 bg-white/80 backdrop-blur-sm ${
+                        isSearchFocused 
+                          ? 'border-primary/50 shadow-lg shadow-primary/10' 
+                          : 'border-border/50 hover:border-primary/30'
+                      }`}
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex flex-wrap justify-center gap-4 animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
+                  <Badge className="bg-green-500/10 text-green-600 border-green-200 px-4 py-2 text-sm font-medium">
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    Respuestas instantáneas
+                  </Badge>
+                  <Badge className="bg-blue-500/10 text-blue-600 border-blue-200 px-4 py-2 text-sm font-medium">
+                    <MessageCircle className="w-4 h-4 mr-2" />
+                    Soporte 24/7
+                  </Badge>
+                  <Badge className="bg-purple-500/10 text-purple-600 border-purple-200 px-4 py-2 text-sm font-medium">
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Base de conocimiento
+                  </Badge>
+                </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Category Filters */}
-        <section className="py-8 bg-gray-50">
+        {/* Category Filters - Improved */}
+        <section className="py-12 bg-gradient-to-b from-gray-50/50 to-background">
           <div className="container mx-auto px-4">
-            <div className="flex flex-wrap gap-4 justify-center">
+            <div className="flex flex-wrap gap-4 justify-center animate-fade-in-up" style={{ animationDelay: '0.8s' }}>
               <Button
                 variant={selectedCategory === "all" ? "default" : "outline"}
                 onClick={() => setSelectedCategory("all")}
-                className="flex items-center space-x-2"
+                className={`flex items-center space-x-2 h-12 px-6 font-medium transition-all duration-300 ${
+                  selectedCategory === "all" 
+                    ? 'bg-gradient-primary text-white shadow-lg' 
+                    : 'hover:bg-primary/10 hover:border-primary/50'
+                }`}
               >
                 <HelpCircle className="w-4 h-4" />
-                <span>Todas</span>
+                <span>Todas las categorías</span>
               </Button>
               {faqCategories.map((category) => (
                 <Button
                   key={category.id}
                   variant={selectedCategory === category.id ? "default" : "outline"}
                   onClick={() => setSelectedCategory(category.id)}
-                  className="flex items-center space-x-2"
+                  className={`flex items-center space-x-2 h-12 px-6 font-medium transition-all duration-300 ${
+                    selectedCategory === category.id 
+                      ? 'bg-gradient-primary text-white shadow-lg' 
+                      : 'hover:bg-primary/10 hover:border-primary/50'
+                  }`}
                 >
                   <category.icon className="w-4 h-4" />
                   <span>{category.name}</span>
@@ -198,39 +241,77 @@ const FAQ = () => {
           </div>
         </section>
 
-        {/* FAQ Content */}
-        <section className="py-16">
+        {/* FAQ Content - Improved */}
+        <section className="py-20 bg-background">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto">
               {filteredFaqs.length > 0 ? (
-                <Accordion type="single" collapsible className="space-y-4">
-                  {filteredFaqs.map((faq, index) => (
-                    <AccordionItem 
-                      key={`faq-${faq.question.slice(0, 20)}-${index}`} 
-                      value={`item-${index}`}
-                      className="bg-white border border-gray-200 rounded-lg px-6"
-                    >
-                      <AccordionTrigger className="text-left text-lg font-semibold text-gray-900 hover:text-blue-600">
-                        {faq.question}
-                      </AccordionTrigger>
-                      <AccordionContent className="text-gray-600 leading-relaxed">
-                        {faq.answer}
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
+                <div className="space-y-6 animate-fade-in-up" style={{ animationDelay: '1s' }}>
+                  {filteredFaqs.map((faq, index) => {
+                    const category = faqCategories.find(cat => cat.id === faq.category);
+                    return (
+                      <Card 
+                        key={`faq-${faq.question.slice(0, 20)}-${index}`}
+                        className="border-border/50 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
+                        style={{ animationDelay: `${1.2 + index * 0.1}s` }}
+                      >
+                        <Accordion type="single" collapsible>
+                          <AccordionItem value={`item-${index}`} className="border-none">
+                            <AccordionTrigger className="px-6 py-4 text-left hover:no-underline group">
+                              <div className="flex items-start space-x-4 w-full">
+                                <div className={`p-2 rounded-full ${category?.bgColor} text-white flex-shrink-0 mt-1`}>
+                                  {category?.icon && <category.icon className="h-4 w-4" />}
+                                </div>
+                                <div className="flex-1">
+                                  <h3 className="text-lg font-semibold text-gray-900 group-hover:text-primary transition-colors duration-200">
+                                    {faq.question}
+                                  </h3>
+                                  <div className="mt-2">
+                                    <Badge className={`${category?.color} text-xs font-medium`}>
+                                      {category?.name}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="px-6 pb-6">
+                              <div className="pl-12">
+                                <p className="text-gray-600 leading-relaxed text-base">
+                                  {faq.answer}
+                                </p>
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                        </Accordion>
+                      </Card>
+                    );
+                  })}
+                </div>
               ) : (
-                <div className="text-center py-16">
-                  <HelpCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-2xl font-semibold text-gray-900 mb-2">
+                <div className="text-center py-20 animate-fade-in-up">
+                  <div className="inline-flex p-6 bg-gray-100 rounded-full mb-6">
+                    <HelpCircle className="w-12 h-12 text-gray-400" />
+                  </div>
+                  <h3 className="text-2xl font-semibold text-gray-900 mb-4">
                     No se encontraron resultados
                   </h3>
-                  <p className="text-gray-600 mb-6">
-                    Intenta con otros términos de búsqueda o contacta a nuestro equipo de soporte
+                  <p className="text-gray-600 mb-8 max-w-md mx-auto">
+                    Intenta con otros términos de búsqueda o contacta a nuestro equipo de soporte para obtener ayuda personalizada
                   </p>
-                  <Button onClick={() => setSearchTerm("")} variant="outline">
-                    Limpiar búsqueda
-                  </Button>
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                    <Button 
+                      onClick={() => setSearchTerm("")} 
+                      variant="outline"
+                      className="h-12 px-8"
+                    >
+                      Limpiar búsqueda
+                    </Button>
+                    <Link to="/contact">
+                      <Button className="h-12 px-8 bg-gradient-primary hover:opacity-90">
+                        Contactar soporte
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
               )}
             </div>
