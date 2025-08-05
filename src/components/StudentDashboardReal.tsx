@@ -174,23 +174,24 @@ const StudentDashboard: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <div className="flex justify-between items-start mb-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
+          <div className="flex-1">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
               Bienvenido, {profile?.full_name || user?.email}
             </h1>
             <p className="text-gray-600">
               Continúa tu aprendizaje y alcanza tus objetivos
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
             <Button 
               variant="outline" 
               onClick={() => navigate('/')}
-              className="flex items-center gap-2 hover:bg-primary hover:text-primary-foreground"
+              className="flex items-center justify-center gap-2 hover:bg-primary hover:text-primary-foreground w-full sm:w-auto"
             >
               <Home className="h-4 w-4" />
-              Página Principal
+              <span className="hidden sm:inline">Página Principal</span>
+              <span className="sm:hidden">Inicio</span>
             </Button>
             <Button 
               variant="outline" 
@@ -199,10 +200,11 @@ const StudentDashboard: React.FC = () => {
                 supabase.auth.signOut();
                 navigate('/');
               }}
-              className="flex items-center gap-2 hover:bg-red-600 hover:text-white"
+              className="flex items-center justify-center gap-2 hover:bg-red-600 hover:text-white w-full sm:w-auto"
             >
               <LogOut className="h-4 w-4" />
-              Cerrar Sesión
+              <span className="hidden sm:inline">Cerrar Sesión</span>
+              <span className="sm:hidden">Salir</span>
             </Button>
           </div>
         </div>
@@ -327,45 +329,59 @@ const StudentDashboard: React.FC = () => {
       </div>
 
       {/* Actividad Reciente */}
-      <div className="space-y-6">
-        <h2 className="text-2xl font-bold text-gray-900">Actividad Reciente</h2>
+      <div className="space-y-6 mt-12">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Actividad Reciente</h2>
+          <p className="text-gray-600">Últimos cursos que has visitado</p>
+        </div>
         
         {enrolledCourses.length > 0 ? (
           <Card>
-            <CardContent className="p-6">
-              <div className="space-y-4">
+            <CardContent className="p-4 sm:p-6">
+              <div className="space-y-3 sm:space-y-4">
                 {enrolledCourses.slice(0, 5).map((course, index) => (
-                  <div key={course.id} className="flex items-center space-x-4 p-3 hover:bg-gray-50 rounded-lg transition-colors">
-                    <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
-                      <img 
-                        src={course.image_url || '/placeholder.svg'} 
-                        alt={course.title}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {course.title}
-                      </p>
-                      <div className="flex items-center space-x-2 text-xs text-gray-500">
-                        <span>course_viewed</span>
-                        <span>•</span>
-                        <span>{new Date(course.progress?.last_accessed || Date.now()).toLocaleString('es-ES')}</span>
+                  <div key={course.id} className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4 p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                    <div className="flex items-center space-x-3 sm:space-x-4 flex-1">
+                      <div className="w-12 h-12 sm:w-12 sm:h-12 rounded-lg overflow-hidden flex-shrink-0">
+                        <img 
+                          src={course.image_url || '/placeholder.svg'} 
+                          alt={course.title}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {course.title}
+                        </p>
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 text-xs text-gray-500">
+                          <span>Curso visualizado</span>
+                          <span className="hidden sm:inline">•</span>
+                          <span>{new Date(course.progress?.last_accessed || Date.now()).toLocaleDateString('es-ES')}</span>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex-shrink-0">
-                      <Badge variant={course.progress?.progress === 100 ? "default" : "secondary"}>
-                        {course.progress?.progress || 0}%
-                      </Badge>
+                    
+                    <div className="flex items-center justify-between sm:justify-end space-x-3 sm:space-x-4">
+                      <div className="flex-shrink-0">
+                        <Badge variant={course.progress?.progress === 100 ? "default" : "secondary"}>
+                          {course.progress?.progress || 0}%
+                        </Badge>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => navigate(`/courses/${course.id}`)}
+                        className="flex items-center gap-1 px-3 py-1"
+                      >
+                        <Play className="h-3 w-3" />
+                        <span className="hidden sm:inline">
+                          {course.progress?.progress ? 'Continuar' : 'Comenzar'}
+                        </span>
+                        <span className="sm:hidden">
+                          {course.progress?.progress ? 'Continuar' : 'Iniciar'}
+                        </span>
+                      </Button>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => navigate(`/courses/${course.id}`)}
-                    >
-                      <Play className="h-3 w-3 mr-1" />
-                      {course.progress?.progress ? 'Continuar' : 'Comenzar'}
-                    </Button>
                   </div>
                 ))}
               </div>
@@ -382,11 +398,15 @@ const StudentDashboard: React.FC = () => {
       </div>
 
       {/* Enrolled Courses */}
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
+      <div className="space-y-6 mt-12">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <h2 className="text-2xl font-bold text-gray-900">Mis Cursos</h2>
-          <Button onClick={() => navigate('/courses')}>
-            Explorar Más Cursos
+          <Button 
+            onClick={() => navigate('/courses')}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 px-6 py-3 rounded-lg font-medium"
+          >
+            <BookOpen className="h-5 w-5" />
+            <span>Explorar Más Cursos</span>
           </Button>
         </div>
 
@@ -400,7 +420,11 @@ const StudentDashboard: React.FC = () => {
               <p className="text-gray-600 mb-4">
                 Explora nuestro catálogo y comienza tu aprendizaje
               </p>
-              <Button onClick={() => navigate('/courses')}>
+              <Button 
+                onClick={() => navigate('/courses')}
+                className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 px-6 py-3 rounded-lg font-medium"
+              >
+                <BookOpen className="h-5 w-5" />
                 Explorar Cursos
               </Button>
             </CardContent>
@@ -497,28 +521,16 @@ const StudentDashboard: React.FC = () => {
         )}
       </div>
 
-      {/* Demo Access Message */}
-      <Card className="border-green-200 bg-green-50 mt-8">
-        <CardContent className="p-6 text-center">
-          <div className="bg-green-100 border border-green-200 rounded-lg p-4">
-            <h3 className="text-lg font-semibold text-green-800 mb-2">✅ Acceso Sin Restricciones</h3>
-            <p className="text-green-600">
-              Puedes acceder a todos los cursos sin limitaciones de suscripción para pruebas.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Quick Actions */}
       <Card className="mt-6">
         <CardHeader>
           <CardTitle>Acciones Rápidas</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Button 
               onClick={() => navigate('/courses')} 
-              className="h-20 flex-col space-y-2"
+              className="h-20 flex-col space-y-2 w-full bg-gradient-to-br from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 border-2 border-blue-200 hover:border-blue-300 text-blue-700 hover:text-blue-800 transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg"
               variant="outline"
             >
               <BookOpen className="h-6 w-6" />
@@ -527,7 +539,7 @@ const StudentDashboard: React.FC = () => {
             
             <Button 
               onClick={() => navigate('/profile')} 
-              className="h-20 flex-col space-y-2"
+              className="h-20 flex-col space-y-2 w-full bg-gradient-to-br from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 border-2 border-green-200 hover:border-green-300 text-green-700 hover:text-green-800 transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg"
               variant="outline"
             >
               <Award className="h-6 w-6" />
