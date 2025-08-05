@@ -95,34 +95,68 @@ const Subscription = () => {
       
       <main>
         {/* Hero Section */}
-        <section className="bg-gradient-to-b from-primary/5 to-background py-20">
-          <div className="container mx-auto px-4 text-center">
-            <div className="max-w-4xl mx-auto">
-              <Badge variant="outline" className="mb-6 bg-primary/10 text-primary border-primary/20">
+        <section className="relative bg-gradient-to-br from-primary/5 via-background to-accent/5 py-24 overflow-hidden">
+          {/* Background decorative elements */}
+          <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
+          <div className="absolute top-0 left-1/4 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-float"></div>
+          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '1.5s' }}></div>
+          
+          <div className="container mx-auto px-4 text-center relative z-10">
+            <div className="max-w-5xl mx-auto">
+              {/* Badge */}
+              <Badge 
+                variant="outline" 
+                className="mb-8 bg-white/90 backdrop-blur-md text-primary border-primary/40 px-6 py-3 text-base font-semibold shadow-lg animate-fade-in-up"
+              >
                 🚀 Planes de Suscripción Premium
               </Badge>
-              <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-primary bg-clip-text text-transparent">
+              
+              {/* Main Title */}
+              <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold mb-8 leading-tight animate-fade-in-up text-gradient-primary" style={{ animationDelay: '0.2s' }}>
                 Acelera tu Carrera Profesional
               </h1>
-              <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+              
+              {/* Description */}
+              <p className="text-xl md:text-2xl text-muted-foreground mb-12 max-w-3xl mx-auto leading-relaxed animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
                 Accede a todo nuestro catálogo de cursos premium, herramientas avanzadas y una comunidad de profesionales con un solo plan.
               </p>
               
-              {/* Quick Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
+              {/* Quick Stats - Improved Layout */}
+              <div className="flex flex-wrap justify-center gap-6 mb-16">
                 {stats.map((stat, index) => (
                   <div 
                     key={index}
-                    className="text-center p-4 rounded-lg bg-background/60 backdrop-blur-sm border border-border/50 hover:bg-background/80 transition-all duration-300"
+                    className="group relative bg-white/80 backdrop-blur-md border border-white/20 rounded-2xl p-6 min-w-[200px] shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105 hover:bg-white/90 animate-fade-in-up"
+                    style={{ animationDelay: `${0.6 + index * 0.1}s` }}
                   >
-                    <div className="text-2xl md:text-3xl font-bold text-primary mb-1">
-                      {stat.number}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {stat.label}
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-accent/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                    <div className="relative z-10">
+                      <div className="text-3xl md:text-4xl font-bold text-primary mb-2 group-hover:scale-110 transition-transform duration-300">
+                        {stat.number}
+                      </div>
+                      <div className="text-sm md:text-base text-muted-foreground font-medium">
+                        {stat.label}
+                      </div>
                     </div>
                   </div>
                 ))}
+              </div>
+              
+              {/* CTA Button */}
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in-up" style={{ animationDelay: '1s' }}>
+                <Button 
+                  size="lg" 
+                  className="bg-gradient-primary hover:opacity-90 text-white px-8 py-4 text-lg font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
+                >
+                  Ver Planes Disponibles
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="lg" 
+                  className="px-8 py-4 text-lg font-semibold border-2 hover:bg-primary/5 transition-all duration-300"
+                >
+                  Comparar Planes
+                </Button>
               </div>
             </div>
           </div>

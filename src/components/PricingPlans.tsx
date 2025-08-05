@@ -9,6 +9,7 @@ import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useToast } from "@/hooks/use-toast";
 import { useSubscriptionPlans } from "@/hooks/useSubscriptionPlans";
 import { supabase } from "@/integrations/supabase/client";
+
 const fallbackPlans = [
   {
     id: "Basic",
@@ -163,119 +164,109 @@ const PricingPlans = () => {
   };
 
   return (
-    <section id="planes" className="py-20 bg-muted/30">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-16 animate-fade-in">
-          <h2 className="text-4xl md:text-5xl font-bold mb-6 text-gradient">
-            Planes de Suscripción
-          </h2>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
-            Elige el plan que mejor se adapte a tus necesidades de aprendizaje
-              </p>
-          
-          {/* Billing Toggle */}
-          <div className="flex items-center justify-center space-x-4 mb-8">
-            <span className={`text-sm ${!isAnnual ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
-              Mensual
-            </span>
-            <Switch
-              checked={isAnnual}
-              onCheckedChange={setIsAnnual}
-              className="data-[state=checked]:bg-primary"
-            />
-            <span className={`text-sm ${isAnnual ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
-              Anual
-            </span>
-            {isAnnual && (
-              <Badge variant="default" className="bg-gradient-primary">
-                Ahorra 17%
-              </Badge>
-            )}
-          </div>
-        </div>
+    <div className="w-full">
+      {/* Billing Toggle */}
+      <div className="flex items-center justify-center space-x-4 mb-12">
+        <span className={`text-sm font-medium transition-colors ${!isAnnual ? 'text-foreground' : 'text-muted-foreground'}`}>
+          Mensual
+        </span>
+        <Switch
+          checked={isAnnual}
+          onCheckedChange={setIsAnnual}
+          className="data-[state=checked]:bg-primary"
+        />
+        <span className={`text-sm font-medium transition-colors ${isAnnual ? 'text-foreground' : 'text-muted-foreground'}`}>
+          Anual
+        </span>
+        {isAnnual && (
+          <Badge variant="default" className="bg-gradient-primary ml-2">
+            Ahorra 17%
+          </Badge>
+        )}
+      </div>
 
-        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-          {plans.map((plan, index) => {
-            const IconComponent = plan.icon;
-            const currentPrice = isAnnual ? plan.annualPrice : plan.monthlyPrice;
-            const period = isAnnual ? "/año" : "/mes";
-            const isCurrentPlan = subscription.subscribed && subscription.subscription_tier === plan.name;
-            
-            return (
-              <Card 
-                key={plan.name}
-                className={`relative overflow-hidden transition-all duration-300 animate-scale-in ${
-                  plan.popular 
-                    ? 'ring-2 ring-primary shadow-glow bg-gradient-card' 
-                    : 'hover:shadow-card bg-card'
-                } ${isCurrentPlan ? 'ring-2 ring-green-500' : ''}`}
-                style={{ animationDelay: `${index * 150}ms` }}
-              >
-                {plan.popular && (
-                  <div className="absolute top-0 left-0 right-0 bg-gradient-primary text-white text-center py-2 text-sm font-medium">
-                    ⭐ Más Popular
-                  </div>
-                )}
+      {/* Plans Container */}
+      <div className="flex flex-col lg:flex-row gap-8 justify-center items-stretch max-w-6xl mx-auto">
+        {plans.map((plan, index) => {
+          const IconComponent = plan.icon;
+          const currentPrice = isAnnual ? plan.annualPrice : plan.monthlyPrice;
+          const period = isAnnual ? "/año" : "/mes";
+          const isCurrentPlan = subscription.subscribed && subscription.subscription_tier === plan.name;
+          
+          return (
+            <Card 
+              key={plan.name}
+              className={`relative flex-1 max-w-md mx-auto lg:mx-0 transition-all duration-300 animate-scale-in ${
+                plan.popular 
+                  ? 'ring-2 ring-primary shadow-glow bg-gradient-card scale-105 z-10' 
+                  : 'hover:shadow-card bg-card hover:scale-105'
+              } ${isCurrentPlan ? 'ring-2 ring-green-500' : ''}`}
+              style={{ animationDelay: `${index * 150}ms` }}
+            >
+              {plan.popular && (
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-gradient-primary text-white px-6 py-2 rounded-full text-sm font-medium shadow-lg z-20">
+                  ⭐ Más Popular
+                </div>
+              )}
+              
+              {isCurrentPlan && (
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-2 rounded-full text-sm font-medium shadow-lg z-20">
+                  ✓ Tu Plan Actual
+                </div>
+              )}
+              
+              <CardHeader className={`text-center ${plan.popular || isCurrentPlan ? 'pt-16' : 'pt-8'}`}>
+                <div className={`inline-flex p-4 rounded-full mb-6 mx-auto ${
+                  plan.popular ? 'bg-gradient-primary' : 'bg-muted'
+                }`}>
+                  <IconComponent className={`h-8 w-8 ${plan.popular ? 'text-white' : 'text-primary'}`} />
+                </div>
                 
-                {isCurrentPlan && (
-                  <div className="absolute top-0 left-0 right-0 bg-green-500 text-white text-center py-2 text-sm font-medium">
-                    ✓ Tu Plan Actual
-                  </div>
-                )}
+                <CardTitle className="text-3xl font-bold text-foreground mb-2">
+                  {plan.name}
+                </CardTitle>
+                <p className="text-muted-foreground text-base leading-relaxed">
+                  {plan.description}
+                </p>
                 
-                <CardHeader className={`text-center ${plan.popular || isCurrentPlan ? 'pt-12' : 'pt-6'}`}>
-                  <div className={`inline-flex p-3 rounded-full mb-4 mx-auto ${
-                    plan.popular ? 'bg-gradient-primary' : 'bg-muted'
-                  }`}>
-                    <IconComponent className={`h-8 w-8 ${plan.popular ? 'text-white' : 'text-primary'}`} />
+                <div className="mt-8">
+                  <div className="flex items-baseline justify-center">
+                    <span className="text-5xl font-bold text-foreground">
+                      ${currentPrice}
+                    </span>
+                    <span className="text-muted-foreground ml-2 text-lg">{period}</span>
                   </div>
-                  
-                  <CardTitle className="text-2xl font-bold text-foreground">
-                    {plan.name}
-                  </CardTitle>
-                  <p className="text-muted-foreground">
-                    {plan.description}
-                  </p>
-                  
-                  <div className="mt-6">
-                    <div className="flex items-baseline justify-center">
-                      <span className="text-4xl font-bold text-foreground">
-                        ${currentPrice}
+                  {isAnnual && (
+                    <div className="text-sm text-muted-foreground mt-3">
+                      <span className="line-through">${plan.monthlyPrice * 12}/año</span>
+                      <span className="text-green-600 ml-2 font-medium">
+                        Ahorra ${(plan.monthlyPrice * 12 - plan.annualPrice).toFixed(2)}
                       </span>
-                      <span className="text-muted-foreground ml-1">{period}</span>
                     </div>
-                    {isAnnual && (
-                      <div className="text-sm text-muted-foreground mt-2">
-                        <span className="line-through">${plan.monthlyPrice * 12}/año</span>
-                        <span className="text-green-600 ml-2 font-medium">
-                          Ahorra ${(plan.monthlyPrice * 12 - plan.annualPrice).toFixed(2)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </CardHeader>
-                
-                <CardContent className="px-6 pb-6">
+                  )}
+                </div>
+              </CardHeader>
+              
+              <CardContent className="px-8 pb-8 flex flex-col h-full">
+                {/* Buttons Section */}
+                <div className="mb-8">
                   {isCurrentPlan ? (
-                    <div className="space-y-2 mb-6">
-                      <Button 
-                        variant="outline" 
-                        className="w-full"
-                        onClick={handleManageSubscription}
-                        disabled={loading}
-                      >
-                        {loading ? "Cargando..." : "Gestionar Suscripción"}
-                      </Button>
-                    </div>
+                    <Button 
+                      variant="outline" 
+                      className="w-full h-12 text-base font-medium"
+                      onClick={handleManageSubscription}
+                      disabled={loading}
+                    >
+                      {loading ? "Cargando..." : "Gestionar Suscripción"}
+                    </Button>
                   ) : (
-                    <div className="flex flex-col space-y-2 mb-6">
+                    <div className="space-y-3">
                       <Button
-                        className={`w-full ${
+                        className={`w-full h-12 text-base font-medium ${
                           plan.popular
-                            ? 'bg-gradient-primary hover:opacity-90'
+                            ? 'bg-gradient-primary hover:opacity-90 text-white'
                             : 'bg-primary hover:bg-primary/90'
                         }`}
-                        size="lg"
                         onClick={() => handleStripe(plan.name)}
                         disabled={loading}
                       >
@@ -283,7 +274,7 @@ const PricingPlans = () => {
                       </Button>
                       <Button
                         variant="outline"
-                        className="w-full"
+                        className="w-full h-12 text-base font-medium"
                         onClick={() => handlePayPal(plan.name)}
                         disabled={loading}
                       >
@@ -291,36 +282,36 @@ const PricingPlans = () => {
                       </Button>
                     </div>
                   )}
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="font-semibold text-foreground mb-3">Incluye:</h4>
-                      <ul className="space-y-2">
-                        {plan.features.map((feature) => (
-                          <li key={feature} className="flex items-start space-x-2">
-                            <Check className="h-5 w-5 text-success mt-0.5 flex-shrink-0" />
-                            <span className="text-sm text-foreground">{feature}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-        
-        <div className="text-center mt-12">
-          <p className="text-muted-foreground mb-4">
-            ¿Necesitas un plan personalizado para tu empresa?
-          </p>
-          <Button variant="outline" size="lg">
-            Contactar Ventas
-          </Button>
-        </div>
+                </div>
+                
+                {/* Features Section */}
+                <div className="flex-1">
+                  <h4 className="font-semibold text-foreground mb-4 text-lg">Incluye:</h4>
+                  <ul className="space-y-3">
+                    {plan.features.map((feature, featureIndex) => (
+                      <li key={featureIndex} className="flex items-start space-x-3">
+                        <Check className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                        <span className="text-foreground leading-relaxed">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
-    </section>
+      
+      {/* Bottom CTA */}
+      <div className="text-center mt-16">
+        <p className="text-muted-foreground mb-4 text-lg">
+          ¿Necesitas un plan personalizado para tu empresa?
+        </p>
+        <Button variant="outline" size="lg" className="h-12 px-8">
+          Contactar Ventas
+        </Button>
+      </div>
+    </div>
   );
 };
 
